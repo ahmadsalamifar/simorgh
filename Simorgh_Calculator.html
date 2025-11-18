@@ -191,6 +191,30 @@
         <p class="mt-4 font-bold text-lg">در حال اتصال به سرور...</p>
         <p id="appwrite-status" class="text-sm text-slate-400 mt-2">لطفاً صبر کنید...</p>
     </div>
+    
+    <!-- LOGIN OVERLAY -->
+    <div id="login-overlay" class="fixed inset-0 bg-slate-900 z-50 flex flex-col items-center justify-center text-white p-4 hidden">
+        <h1 class="text-3xl md:text-4xl font-black mb-4 text-center leading-tight text-teal-400 drop-shadow-lg">
+            ورود به سامانه قیمت‌گذاری <br> شرکت سیمرغ گستر پویا
+        </h1>
+        <p class="text-slate-300 mb-8 text-center max-w-md">برای استفاده، وارد حساب کاربری خود شوید یا ثبت‌نام کنید.</p>
+        
+        <div class="bg-white text-slate-800 p-8 rounded-2xl w-full max-w-sm shadow-2xl border-t-4 border-teal-500">
+            <form id="auth-form" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-bold mb-2 text-slate-600">ایمیل</label>
+                    <input type="email" id="auth-email" class="w-full border p-3 rounded-lg bg-slate-50 focus:bg-white" placeholder="you@company.com" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-2 text-slate-600">رمز عبور</label>
+                    <input type="password" id="auth-password" class="w-full border p-3 rounded-lg bg-slate-50 focus:bg-white" placeholder="حداقل ۸ کاراکتر" minlength="8" required>
+                </div>
+                <button type="submit" class="w-full btn-primary py-3 rounded-xl font-bold text-lg shadow-lg">ورود / ثبت نام</button>
+            </form>
+            <p id="auth-error" class="text-rose-600 bg-rose-50 p-3 rounded border border-rose-100 text-sm mt-4 text-center hidden font-bold"></p>
+        </div>
+    </div>
+
 
     <div id="app-content" class="max-w-7xl mx-auto hidden fade-in">
         
@@ -202,10 +226,7 @@
                 </h1>
                 <p class="text-slate-500 font-medium">سامانه هوشمند محاسبه قیمت تمام شده کانکس</p>
             </div>
-            <div class="mt-4 md:mt-0 flex items-center gap-2 bg-green-50 px-4 py-2 rounded-lg border border-green-100">
-                <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span class="text-sm text-green-700 font-bold">اتصال برقرار است</span>
-            </div>
+            <button onclick="logout()" class="mt-4 md:mt-0 text-rose-500 text-sm font-bold hover:bg-rose-50 px-4 py-2 rounded-lg transition-colors border border-rose-100">خروج از حساب</button>
         </header>
 
         <!-- TABS -->
@@ -436,35 +457,66 @@
             materialSort: 'name_asc',
             componentFilter: ''
         };
-
+        
         // ------------------------------------------------------------------
-        // 2. INITIALIZATION (Anonymous Access)
+        // 2. INITIALIZATION (Multi-User)
         // ------------------------------------------------------------------
-        async function init() {
-            document.getElementById('appwrite-status').textContent = 'در حال اتصال و احراز هویت ناشناس...';
+        
+        document.getElementById('auth-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const errorEl = document.getElementById('auth-error');
+            
+            errorEl.classList.add('hidden');
+            
             try {
-                // Check if user is logged in (even anonymously)
-                try {
-                    await account.get();
-                } catch (e) {
-                    // If not, create an anonymous session
-                    await account.createAnonymousSession();
+                // 1. Try to login (create session)
+                await account.createEmailPasswordSession(email, password);
+                location.reload();
+            } catch (loginErr) {
+                // If login fails (user not found), try to register and then login
+                if (loginErr.code === 404) {
+                    try {
+                        // 2. Register new user
+                        await account.create(ID.unique(), email, password);
+                        // 3. Login the new user
+                        await account.createEmailPasswordSession(email, password);
+                        location.reload();
+                    } catch (registerErr) {
+                         errorEl.textContent = "خطا در ثبت‌نام: " + registerErr.message;
+                         errorEl.classList.remove('hidden');
+                         console.error(registerErr);
+                    }
+                } else {
+                    // Other login errors (wrong password, network issue)
+                    errorEl.textContent = "ورود ناموفق: نام کاربری یا رمز عبور اشتباه است.";
+                    errorEl.classList.remove('hidden');
+                    console.error(loginErr);
                 }
-                
+            }
+        });
+
+        async function init() {
+            document.getElementById('loading-screen').classList.remove('hidden');
+            try {
+                // Check if user has an active session
+                await account.get(); 
+                // If successful, proceed to load app
                 await loadAllData();
-                
                 document.getElementById('loading-screen').classList.add('hidden');
                 document.getElementById('app-content').classList.remove('hidden');
                 
-            } catch (err) {
-                console.error("Init Error:", err);
-                document.getElementById('loading-screen').innerHTML = `
-                    <div class="text-red-400 text-center p-8">
-                        <div class="text-2xl font-bold">خطا در اتصال به سرور Appwrite</div>
-                        <p class="mt-4 text-sm">لطفاً مطمئن شوید شناسه‌های پروژه و دیتابیس در کد HTML (APPWRITE_CONFIG) صحیح وارد شده و دسترسی‌های (Permissions) لازم در Appwrite فعال باشد (Role: Any).</p>
-                    </div>
-                `;
+            } catch (e) {
+                // If no session or session expired, show login screen
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('login-overlay').classList.remove('hidden');
             }
+        }
+
+        async function logout() {
+            await account.deleteSession('current');
+            location.reload();
         }
 
         // ------------------------------------------------------------------
@@ -489,6 +541,7 @@
         async function loadAllData() {
              document.getElementById('appwrite-status').textContent = 'در حال دریافت اطلاعات...';
             const [cRes, mRes, fRes] = await Promise.all([
+                // NOTE: Queries now automatically filter by user permissions if configured correctly
                 db.listDocuments(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.CATS, [Query.limit(100)]),
                 db.listDocuments(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.MATS, [Query.limit(5000)]),
                 db.listDocuments(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.FORMS, [Query.limit(500)])
@@ -523,11 +576,18 @@
             if (state.categories.some(c => c.name === name)) return alert('این دسته‌بندی قبلاً وجود دارد.');
 
             try {
-                const res = await db.createDocument(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.CATS, ID.unique(), { name });
+                // Add permissions to document so only owner can access/edit it
+                const res = await db.createDocument(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.CATS, ID.unique(), 
+                    { name },
+                    [
+                        Appwrite.Permission.read(Appwrite.Role.user()),
+                        Appwrite.Permission.write(Appwrite.Role.user()),
+                    ]
+                );
                 state.categories.push(res);
                 updateUI();
                 nameInput.value = '';
-            } catch (err) { console.error(err); }
+            } catch (err) { alert('خطا: ثبت ناموفق بود. دسترسی Appwrite را چک کنید.'); console.error(err); }
         }
 
         async function deleteCategory(id) {
@@ -593,12 +653,17 @@
                     const idx = state.materials.findIndex(m => m.$id === id);
                     state.materials[idx] = res;
                 } else {
-                    res = await db.createDocument(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.MATS, ID.unique(), data);
+                    res = await db.createDocument(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.MATS, ID.unique(), data,
+                        [
+                            Appwrite.Permission.read(Appwrite.Role.user()),
+                            Appwrite.Permission.write(Appwrite.Role.user()),
+                        ]
+                    );
                     state.materials.push(res);
                 }
                 updateUI();
                 resetMaterialForm();
-            } catch (err) { alert('خطا در ذخیره: ' + err.message); }
+            } catch (err) { alert('خطا در ذخیره: ' + err.message); console.error(err); }
         }
 
         function editMaterial(id) {
@@ -615,6 +680,15 @@
             document.getElementById('mat-cancel-btn').classList.remove('hidden');
             
             document.getElementById('tab-materials').scrollIntoView({behavior: 'smooth'});
+        }
+
+        async function deleteMaterial(id) {
+            if(!confirm('آیا از حذف این کالا مطمئن هستید؟')) return;
+            try {
+                await db.deleteDocument(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.MATS, id);
+                state.materials = state.materials.filter(m => m.$id !== id);
+                updateUI();
+            } catch(err) { console.error(err); }
         }
 
         function resetMaterialForm() {
@@ -719,15 +793,19 @@
             e.preventDefault();
             const name = document.getElementById('new-formula-name').value;
             try {
+                // Add permissions to document so only owner can access/edit it
                 const res = await db.createDocument(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.FORMS, ID.unique(), {
                     name, 
                     components: JSON.stringify([]), 
                     labor: 0.0, overhead: 0.0, profit: 0.0
-                });
+                }, [
+                    Appwrite.Permission.read(Appwrite.Role.user()),
+                    Appwrite.Permission.write(Appwrite.Role.user()),
+                ]);
                 state.formulas.unshift(res); // Add to top
                 document.getElementById('new-formula-name').value = '';
                 selectFormula(res.$id);
-            } catch(err) { console.error(err); }
+            } catch(err) { alert('خطا: ثبت ناموفق بود. دسترسی Appwrite را چک کنید.'); console.error(err); }
         }
 
         function selectFormula(id) {
@@ -796,8 +874,7 @@
                 final: sub + profit
             };
         }
-        
-        // --- RENDER DETAIL VIEW ---
+
         function renderFormulaDetail(id) {
             const f = state.formulas.find(x => x.$id === id);
             if(!f) return;
@@ -1068,7 +1145,7 @@
                             rowsHtml += `
                                 <tr class="border-b border-slate-200 ${depth > 0 ? 'bg-slate-50 text-slate-500 text-xs' : ''}">
                                     <td class="p-3 text-right ${depth > 0 ? 'pl-8' : ''}">${depth > 0 ? '↳ ' : ''}${m.name}</td>
-                                    <td class="p-3 text-center font-mono" dir="ltr">${(c.qty * qtyMult).toLocaleString()}</td>
+                                    <td class="p-3 text-center" dir="ltr">${(c.qty * qtyMult).toLocaleString()}</td>
                                     <td class="p-3 text-center">${m.unit}</td>
                                 </tr>
                             `;
