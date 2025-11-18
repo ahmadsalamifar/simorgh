@@ -189,6 +189,7 @@
     <div id="loading-screen" class="fixed inset-0 bg-slate-900 z-50 flex flex-col items-center justify-center text-white">
         <div class="loader"></div>
         <p class="mt-4 font-bold text-lg">در حال اتصال به سرور...</p>
+        <p id="appwrite-status" class="text-sm text-slate-400 mt-2">لطفاً صبر کنید...</p>
     </div>
 
     <div id="app-content" class="max-w-7xl mx-auto hidden fade-in">
@@ -279,9 +280,18 @@
             <div class="card">
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                     <h3 class="text-lg font-bold text-slate-700">موجودی انبار و قیمت‌ها</h3>
-                    <div class="relative w-full sm:w-72">
-                        <input type="text" placeholder="جستجو در نام کالا..." oninput="renderMaterials(this.value)" class="input-field pl-10">
-                        <span class="absolute left-3 top-3 text-slate-400">🔍</span>
+                    <div class="flex gap-4">
+                        <div class="relative w-full sm:w-52">
+                            <input type="text" placeholder="جستجو در نام کالا..." oninput="renderMaterials(this.value)" class="input-field text-sm pl-10">
+                            <span class="absolute left-3 top-3 text-slate-400">🔍</span>
+                        </div>
+                        <select id="sort-materials" onchange="renderMaterials()" class="input-field w-full sm:w-40 text-sm">
+                            <option value="name_asc">مرتب سازی: نام (الفبا)</option>
+                            <option value="name_desc">مرتب سازی: نام (معکوس)</option>
+                            <option value="price_asc">مرتب سازی: قیمت (کمترین)</option>
+                            <option value="price_desc">مرتب سازی: قیمت (بیشترین)</option>
+                            <option value="category">مرتب سازی: دسته‌بندی</option>
+                        </select>
                     </div>
                 </div>
                 
@@ -308,7 +318,7 @@
                 <!-- Master List (Sidebar) -->
                 <div class="lg:col-span-4 bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden h-[600px] flex flex-col">
                     <div class="p-4 bg-slate-50 border-b">
-                        <input type="text" placeholder="جستجو در فرمول‌ها..." oninput="renderFormulaList(this.value)" class="input-field text-sm">
+                        <input type="text" placeholder="جستجو در فرمول‌ها..." oninput="renderFormulaList(this.value)" class="input-field text-sm bg-white">
                     </div>
                     <div id="formula-master-list" class="flex-1 overflow-y-auto p-2 space-y-2">
                         <!-- Formula List Items -->
@@ -405,9 +415,9 @@
             PROJECT_ID: '691c9337000c1532f26a',  // <--- شناسه پروژه خود را اینجا قرار دهید
             DB_ID: '691c956400150133e319',      // <--- شناسه دیتابیس خود را اینجا قرار دهید
             COLS: {
-                CATS: 'categories',
-                MATS: 'materials',
-                FORMS: 'formulas'
+                CATS: 'categories', // <--- کد شناسایی جدول دسته‌ها
+                MATS: 'materials',  // <--- کد شناسایی جدول مواد
+                FORMS: 'formulas'   // <--- کد شناسایی جدول فرمول‌ها
             }
         };
 
@@ -421,61 +431,46 @@
             categories: [],
             materials: [],
             formulas: [],
-            activeFormulaId: null
+            activeFormulaId: null,
+            materialFilter: '',
+            materialSort: 'name_asc',
+            componentFilter: ''
         };
 
         // ------------------------------------------------------------------
-        // 2. INITIALIZATION (No Login Screen)
+        // 2. INITIALIZATION (Anonymous Access)
         // ------------------------------------------------------------------
         async function init() {
+            document.getElementById('appwrite-status').textContent = 'در حال اتصال و احراز هویت ناشناس...';
             try {
-                // Try to get session, if fails, create anonymous
+                // Check if user is logged in (even anonymously)
                 try {
                     await account.get();
                 } catch (e) {
-                    console.log("No session, creating anonymous...");
+                    // If not, create an anonymous session
                     await account.createAnonymousSession();
                 }
                 
-                // Load data
                 await loadAllData();
                 
-                // Show App
                 document.getElementById('loading-screen').classList.add('hidden');
                 document.getElementById('app-content').classList.remove('hidden');
                 
             } catch (err) {
                 console.error("Init Error:", err);
-                alert("خطا در اتصال به سرور. لطفاً اینترنت خود را بررسی کنید یا تنظیمات Appwrite را چک کنید.");
+                document.getElementById('loading-screen').innerHTML = `
+                    <div class="text-red-400 text-center p-8">
+                        <div class="text-2xl font-bold">خطا در اتصال به سرور Appwrite</div>
+                        <p class="mt-4 text-sm">لطفاً مطمئن شوید شناسه‌های پروژه و دیتابیس در کد HTML (APPWRITE_CONFIG) صحیح وارد شده و دسترسی‌های (Permissions) لازم در Appwrite فعال باشد (Role: Any).</p>
+                    </div>
+                `;
             }
         }
 
         // ------------------------------------------------------------------
-        // 3. DATA LOADING
+        // 3. DATA LOADING & UTILS
         // ------------------------------------------------------------------
-        async function loadAllData() {
-            // Fetch everything in parallel for speed
-            const [cRes, mRes, fRes] = await Promise.all([
-                db.listDocuments(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.CATS, [Query.limit(100)]),
-                db.listDocuments(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.MATS, [Query.limit(5000)]), // High limit for materials
-                db.listDocuments(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.FORMS, [Query.limit(500)])
-            ]);
-
-            state.categories = cRes.documents;
-            state.materials = mRes.documents.sort((a, b) => a.name.localeCompare(b.name));
-            state.formulas = fRes.documents.sort((a, b) => new Date(b.$updatedAt) - new Date(a.$updatedAt)); // Sort by newest
-
-            updateUI();
-        }
-
-        function updateUI() {
-            renderCategories();
-            renderMaterials();
-            updateDropdowns();
-            renderFormulaList();
-            if (state.activeFormulaId) renderFormulaDetail(state.activeFormulaId);
-        }
-
+        
         // Format Date Helper (Fa-IR)
         function formatDate(isoString) {
             if (!isoString) return '';
@@ -488,7 +483,33 @@
 
         // Format Price Helper
         function formatPrice(num) {
-            return num.toLocaleString('en-US');
+            return Number(num).toLocaleString('en-US');
+        }
+
+        async function loadAllData() {
+             document.getElementById('appwrite-status').textContent = 'در حال دریافت اطلاعات...';
+            const [cRes, mRes, fRes] = await Promise.all([
+                db.listDocuments(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.CATS, [Query.limit(100)]),
+                db.listDocuments(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.MATS, [Query.limit(5000)]),
+                db.listDocuments(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.FORMS, [Query.limit(500)])
+            ]);
+
+            state.categories = cRes.documents;
+            state.materials = mRes.documents;
+            state.formulas = fRes.documents;
+
+            updateUI();
+        }
+
+        function updateUI() {
+            // Re-sort materials based on current state
+            sortMaterials(state.materials, state.materialSort);
+
+            renderCategories();
+            renderMaterials();
+            updateDropdowns();
+            renderFormulaList();
+            if (state.activeFormulaId) renderFormulaDetail(state.activeFormulaId);
         }
 
         // ------------------------------------------------------------------
@@ -530,6 +551,30 @@
         // ------------------------------------------------------------------
         // 5. MATERIALS LOGIC
         // ------------------------------------------------------------------
+        
+        // Sorting function
+        function sortMaterials(materialArray, sortKey) {
+            const getCatName = (m) => state.categories.find(c => c.$id === m.category_id)?.name || 'سایر';
+            
+            switch (sortKey) {
+                case 'name_asc':
+                    materialArray.sort((a, b) => a.name.localeCompare(b.name));
+                    break;
+                case 'name_desc':
+                    materialArray.sort((a, b) => b.name.localeCompare(a.name));
+                    break;
+                case 'price_asc':
+                    materialArray.sort((a, b) => a.price - b.price);
+                    break;
+                case 'price_desc':
+                    materialArray.sort((a, b) => b.price - a.price);
+                    break;
+                case 'category':
+                    materialArray.sort((a, b) => getCatName(a).localeCompare(getCatName(b)));
+                    break;
+            }
+        }
+
         async function handleSaveMaterial(e) {
             e.preventDefault();
             const id = document.getElementById('mat-id').value;
@@ -551,8 +596,6 @@
                     res = await db.createDocument(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.MATS, ID.unique(), data);
                     state.materials.push(res);
                 }
-                // Sort A-Z
-                state.materials.sort((a, b) => a.name.localeCompare(b.name));
                 updateUI();
                 resetMaterialForm();
             } catch (err) { alert('خطا در ذخیره: ' + err.message); }
@@ -574,15 +617,6 @@
             document.getElementById('tab-materials').scrollIntoView({behavior: 'smooth'});
         }
 
-        async function deleteMaterial(id) {
-            if(!confirm('آیا از حذف این کالا مطمئن هستید؟')) return;
-            try {
-                await db.deleteDocument(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.MATS, id);
-                state.materials = state.materials.filter(m => m.$id !== id);
-                updateUI();
-            } catch(err) { console.error(err); }
-        }
-
         function resetMaterialForm() {
             document.getElementById('material-form').reset();
             document.getElementById('mat-id').value = '';
@@ -592,8 +626,13 @@
         }
 
         function renderMaterials(filter = '') {
+            state.materialFilter = filter;
+            state.materialSort = document.getElementById('sort-materials').value;
+
+            let filtered = state.materials.filter(m => m.name.includes(state.materialFilter));
+            sortMaterials(filtered, state.materialSort);
+            
             const container = document.getElementById('materials-container');
-            const filtered = state.materials.filter(m => m.name.includes(filter));
             
             if (filtered.length === 0) {
                 container.innerHTML = '<p class="col-span-full text-center text-slate-400 py-8">موردی یافت نشد</p>';
@@ -657,9 +696,20 @@
                 state.categories.map(c => `<option value="${c.$id}">${c.name}</option>`).join('');
             }
             
-            // Update formula component dropdown
+            // Update formula component dropdown (only if active)
             const compSelect = document.getElementById('comp-select');
-            if(compSelect) compSelect.innerHTML = options;
+            if(compSelect) {
+                 const currentFormulaId = state.activeFormulaId;
+                 let formulaOptions = options;
+                 
+                 const otherFormulas = state.formulas.filter(x => x.$id !== currentFormulaId);
+                 if(otherFormulas.length) {
+                    formulaOptions += `<optgroup label="فرمول‌های دیگر (زیرمجموعه)">` + 
+                        otherFormulas.map(x => `<option value="FORM:${x.$id}">🔗 ${x.name}</option>`).join('') + 
+                        `</optgroup>`;
+                 }
+                 compSelect.innerHTML = formulaOptions;
+            }
         }
 
         // ------------------------------------------------------------------
@@ -716,13 +766,13 @@
                 </div>
             `).join('');
         }
-
+        
         // --- CORE COST CALCULATION ---
         function calculateCost(formulaId, stack = []) {
-            if(stack.includes(formulaId)) return { cost: 0, error: true }; // Loop protection
+            if(stack.includes(formulaId)) return { cost: 0, final: 0, error: true }; 
             
             const f = state.formulas.find(x => x.$id === formulaId);
-            if(!f) return { cost: 0 };
+            if(!f) return { cost: 0, final: 0 };
 
             let matCost = 0;
             const components = JSON.parse(f.components || '[]');
@@ -733,7 +783,7 @@
                     if(m) matCost += m.price * comp.qty;
                 } else if (comp.type === 'form') {
                     const sub = calculateCost(comp.id, [...stack, formulaId]);
-                    matCost += sub.final * comp.qty; // Use final price of sub-formula
+                    matCost += sub.final * comp.qty;
                 }
             });
 
@@ -746,7 +796,8 @@
                 final: sub + profit
             };
         }
-
+        
+        // --- RENDER DETAIL VIEW ---
         function renderFormulaDetail(id) {
             const f = state.formulas.find(x => x.$id === id);
             if(!f) return;
@@ -799,7 +850,15 @@
                 <div class="card !mb-0 border-teal-500">
                     <div class="flex flex-col md:flex-row justify-between items-start mb-6 gap-4">
                          <div>
-                            <h2 class="text-2xl font-black text-slate-800 leading-tight">${f.name}</h2>
+                            <div class="flex items-center gap-2">
+                                <h2 class="text-2xl font-black text-slate-800 leading-tight" id="formula-name-display-${id}">${f.name}</h2>
+                                <button onclick="toggleEditName('${id}')" class="text-slate-400 hover:text-teal-600 active:scale-90 transition-transform">✎</button>
+                            </div>
+                            <div id="formula-name-edit-form-${id}" class="hidden flex gap-2 items-center mt-2">
+                                <input type="text" id="formula-name-input-${id}" class="input-field text-lg" value="${f.name}" required>
+                                <button onclick="saveFormulaName('${id}')" class="btn btn-primary px-3 py-1 text-sm">ذخیره</button>
+                                <button onclick="toggleEditName('${id}')" class="btn btn-danger px-3 py-1 text-sm">لغو</button>
+                            </div>
                             <span class="text-xs text-slate-400 mt-1 block">شناسه سیستمی: ${f.$id}</span>
                          </div>
                          <div class="flex items-center gap-2 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
@@ -808,15 +867,20 @@
                          </div>
                     </div>
                     
-                    <!-- Add Component Box -->
+                    <!-- Add Component Box (with Filter) -->
                     <form onsubmit="addComponent(event, '${id}')" class="bg-slate-100 p-4 rounded-xl mb-6 flex flex-col md:flex-row gap-2 shadow-inner border border-slate-200">
-                        <select id="comp-select" class="flex-grow md:w-1/2 input-field !border-0" required></select>
-                        <input type="number" id="comp-qty" step="any" placeholder="مقدار" class="w-full md:w-24 input-field !border-0 text-center font-bold" required>
+                        <select id="comp-category-filter-${id}" onchange="updateComponentSelect('${id}')" class="input-field w-full md:w-40 text-sm">
+                            <option value="">-- فیلتر دسته‌بندی --</option>
+                            ${state.categories.map(c => `<option value="${c.$id}">${c.name}</option>`).join('')}
+                            <option value="formulas">فرمول‌های زیرمجموعه</option>
+                        </select>
+                        <select id="comp-select" class="flex-grow md:w-1/2 input-field" required></select>
+                        <input type="number" id="comp-qty" step="any" placeholder="مقدار" class="w-full md:w-24 input-field text-center font-bold" required>
                         <button type="submit" class="btn-primary px-6 py-2 rounded-lg shadow-sm hover:shadow-md">+</button>
                     </form>
 
                     <!-- Components List -->
-                    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6 shadow-sm">
+                    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6 shadow-sm max-h-72 overflow-y-auto">
                         ${rows || '<div class="p-8 text-center text-slate-400 text-sm flex flex-col items-center gap-2"><span class="text-2xl">📭</span>لیست مواد اولیه خالی است</div>'}
                     </div>
 
@@ -824,40 +888,30 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-slate-50 p-5 rounded-xl border border-slate-200">
                         <div>
                             <label class="text-xs font-bold text-slate-500 mb-1 block">دستمزد (تومان)</label>
-                            <input type="text" class="input-field font-bold text-slate-700" value="${formatPrice(f.labor)}" onchange="updateFormulaCost('${id}', 'labor', this.value)">
+                            <input type="text" class="input-field font-bold text-slate-700 price-input" value="${formatPrice(f.labor)}" onchange="updateFormulaCost('${id}', 'labor', this.value)">
                         </div>
                         <div>
                             <label class="text-xs font-bold text-slate-500 mb-1 block">سربار (تومان)</label>
-                            <input type="text" class="input-field font-bold text-slate-700" value="${formatPrice(f.overhead)}" onchange="updateFormulaCost('${id}', 'overhead', this.value)">
+                            <input type="text" class="input-field font-bold text-slate-700 price-input" value="${formatPrice(f.overhead)}" onchange="updateFormulaCost('${id}', 'overhead', this.value)">
                         </div>
                         <div>
                             <label class="text-xs font-bold text-slate-500 mb-1 block">سود (درصد)</label>
-                            <input type="number" class="input-field font-bold text-slate-700" value="${f.profit}" onchange="updateFormulaCost('${id}', 'profit', this.value)">
+                            <input type="number" class="input-field font-bold text-slate-700 price-input" value="${f.profit}" onchange="updateFormulaCost('${id}', 'profit', this.value)">
                         </div>
                     </div>
 
                     <!-- Final Calculation Card (Dark) -->
                     <div class="bg-slate-800 text-white p-6 rounded-xl shadow-xl relative overflow-hidden">
-                        <!-- Decorative bar -->
                         <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 to-cyan-400"></div>
                         
-                        <div class="flex justify-between text-sm text-slate-400 mb-1">
-                            <span>جمع مواد اولیه:</span> <span class="font-mono">${formatPrice(calc.matCost)}</span>
-                        </div>
                         <div class="flex justify-between text-sm text-slate-400 mb-4 border-b border-slate-700 pb-3">
-                            <span>هزینه تولید (مواد + دستمزد + سربار):</span> <span class="font-mono">${formatPrice(calc.sub)}</span>
+                            <span>هزینه تولید (مواد ${formatPrice(calc.matCost)} + دستمزد + سربار):</span> <span class="font-mono">${formatPrice(calc.sub)}</span>
                         </div>
                         
                         <div class="flex flex-col items-center justify-center bg-slate-900/50 p-6 rounded-xl border border-slate-700">
                              <span class="text-slate-400 text-xs mb-1 uppercase tracking-widest">قیمت تمام شده نهایی</span>
-                             <span class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-teal-200 to-cyan-200 tracking-tight mb-2">${formatPrice(calc.final)}</span>
+                             <span class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-teal-200 to-cyan-200 tracking-tight">${formatPrice(calc.final)}</span>
                              <span class="text-sm text-slate-500">تومان</span>
-                             
-                             <!-- Explicit Date Badge -->
-                             <div class="mt-4 flex items-center gap-2 bg-red-500/20 text-red-200 px-3 py-1 rounded-full border border-red-500/30 text-xs font-bold animate-pulse">
-                                <span>🕒 آخرین محاسبه قیمت:</span>
-                                <span class="font-mono" dir="ltr">${new Date().toLocaleTimeString('fa-IR')}</span>
-                             </div>
                         </div>
 
                         <button onclick="showPrintModal('${id}')" class="w-full mt-6 bg-white text-slate-900 py-3 rounded-lg hover:bg-slate-100 transition-colors text-sm font-bold flex justify-center items-center gap-2 shadow-lg">
@@ -867,16 +921,79 @@
                 </div>
             `;
             
-            // Populate dropdown
-            let options = document.getElementById('mat-category').innerHTML; 
-            const otherFormulas = state.formulas.filter(x => x.$id !== id);
-            if(otherFormulas.length) {
-                options += `<optgroup label="فرمول‌های دیگر (زیرمجموعه)">` + 
-                    otherFormulas.map(x => `<option value="FORM:${x.$id}">🔗 ${x.name}</option>`).join('') + 
-                    `</optgroup>`;
-            }
-            document.getElementById('comp-select').innerHTML = options;
+            // Initial call to fill component select
+            updateComponentSelect(id);
         }
+
+        // --- FORMULA NAME EDIT LOGIC ---
+        function toggleEditName(id) {
+            const display = document.getElementById(`formula-name-display-${id}`);
+            const editForm = document.getElementById(`formula-name-edit-form-${id}`);
+
+            if (display.style.display !== 'none') {
+                display.style.display = 'none';
+                editForm.style.display = 'flex';
+                document.getElementById(`formula-name-input-${id}`).focus();
+            } else {
+                display.style.display = 'block';
+                editForm.style.display = 'none';
+            }
+        }
+
+        async function saveFormulaName(id) {
+            const input = document.getElementById(`formula-name-input-${id}`);
+            const newName = input.value.trim();
+            if (!newName) return;
+
+            try {
+                await db.updateDocument(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.FORMS, id, { name: newName });
+                const f = state.formulas.find(x => x.$id === id);
+                f.name = newName;
+                f.$updatedAt = new Date().toISOString();
+                toggleEditName(id);
+                renderFormulaDetail(id);
+                renderFormulaList();
+            } catch(err) { console.error(err); }
+        }
+
+        // --- COMPONENT SELECT FILTER LOGIC ---
+        function updateComponentSelect(currentFormulaId) {
+            const filterId = document.getElementById(`comp-category-filter-${currentFormulaId}`).value;
+            const selectEl = document.getElementById('comp-select');
+            
+            let options = '<option value="">-- انتخاب کنید --</option>';
+
+            if (filterId === 'formulas') {
+                 // Show only other formulas (for nested logic)
+                 const otherFormulas = state.formulas.filter(x => x.$id !== currentFormulaId);
+                 if(otherFormulas.length) {
+                    options += `<optgroup label="فرمول‌های زیرمجموعه">` + 
+                        otherFormulas.map(x => `<option value="FORM:${x.$id}">🔗 ${x.name}</option>`).join('') + 
+                        `</optgroup>`;
+                 }
+            } else {
+                // Show materials, filtered by category ID
+                const filteredMaterials = state.materials.filter(m => filterId === '' || m.category_id === filterId);
+                
+                const categorizedItems = {};
+                filteredMaterials.forEach(m => {
+                    const catName = state.categories.find(c => c.$id === m.category_id)?.name || 'سایر';
+                    if (!categorizedItems[catName]) categorizedItems[catName] = [];
+                    categorizedItems[catName].push(m);
+                });
+
+                for (const catName in categorizedItems) {
+                    options += `<optgroup label="${catName}">`;
+                    categorizedItems[catName].forEach(m => {
+                        options += `<option value="${m.$id}">${m.name} (${m.unit})</option>`;
+                    });
+                    options += `</optgroup>`;
+                }
+            }
+            
+            selectEl.innerHTML = options;
+        }
+
 
         // --- FORMULA DB ACTIONS ---
         async function addComponent(e, fid) {
@@ -884,13 +1001,14 @@
             const val = document.getElementById('comp-select').value;
             const qty = parseFloat(document.getElementById('comp-qty').value);
             
+            if (!val || isNaN(qty) || qty <= 0) return alert('لطفاً جزء و مقدار صحیح را انتخاب کنید.');
+
             let type = 'mat', id = val;
             if(val.startsWith('FORM:')) { type = 'form'; id = val.split(':')[1]; }
 
             const f = state.formulas.find(x => x.$id === fid);
             const comps = JSON.parse(f.components || '[]');
             
-            // Add or update qty
             const exist = comps.find(c => c.id === id && c.type === type);
             if(exist) exist.qty += qty;
             else comps.push({ id, type, qty });
@@ -898,7 +1016,7 @@
             try {
                 await db.updateDocument(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.FORMS, fid, { components: JSON.stringify(comps) });
                 f.components = JSON.stringify(comps);
-                f.$updatedAt = new Date().toISOString(); // Manually update timestamp for immediate UI feedback
+                f.$updatedAt = new Date().toISOString();
                 renderFormulaDetail(fid);
             } catch(err) { console.error(err); }
         }
@@ -922,7 +1040,7 @@
             try {
                 await db.updateDocument(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.FORMS, fid, { [field]: num });
                 renderFormulaDetail(fid);
-                renderFormulaList(); // Update timestamp in sidebar
+                renderFormulaList(); 
             } catch(err) { console.error(err); }
         }
 
@@ -938,7 +1056,6 @@
 
             let rowsHtml = '';
             
-            // Helper to flatten items
             const getPrintItems = (formulaId, qtyMult = 1, depth = 0) => {
                 const frm = state.formulas.find(x => x.$id === formulaId);
                 if(!frm) return;
@@ -950,8 +1067,8 @@
                         if(m) {
                             rowsHtml += `
                                 <tr class="border-b border-slate-200 ${depth > 0 ? 'bg-slate-50 text-slate-500 text-xs' : ''}">
-                                    <td class="p-3 text-right pr-${depth * 6 + 3}">${depth > 0 ? '↳ ' : ''}${m.name}</td>
-                                    <td class="p-3 text-center" dir="ltr">${(c.qty * qtyMult).toLocaleString()}</td>
+                                    <td class="p-3 text-right ${depth > 0 ? 'pl-8' : ''}">${depth > 0 ? '↳ ' : ''}${m.name}</td>
+                                    <td class="p-3 text-center font-mono" dir="ltr">${(c.qty * qtyMult).toLocaleString()}</td>
                                     <td class="p-3 text-center">${m.unit}</td>
                                 </tr>
                             `;
@@ -961,7 +1078,7 @@
                          if(sub) {
                              rowsHtml += `
                                 <tr class="border-b border-slate-200 bg-slate-100 font-bold text-slate-700">
-                                    <td class="p-3 text-right pr-${depth * 4 + 2}">🔹 ${sub.name}</td>
+                                    <td class="p-3 text-right ${depth > 0 ? 'pl-8' : ''}">🔹 ${sub.name}</td>
                                     <td class="p-3 text-center" dir="ltr">${(c.qty * qtyMult).toLocaleString()}</td>
                                     <td class="p-3 text-center">عدد</td>
                                 </tr>
