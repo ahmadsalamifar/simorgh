@@ -113,78 +113,66 @@
                 <!-- Form Side -->
                 <div class="w-full md:w-1/3 order-2 md:order-1">
                     <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 md:sticky md:top-4 h-auto overflow-y-auto max-h-[90vh]">
+                        <h3 class="font-bold text-slate-700 text-sm mb-3 border-b pb-2">مدیریت کالا (چند واحدی)</h3>
                         
-                        <!-- GUIDE BUTTON -->
-                        <div class="mb-4">
-                            <button id="btn-toggle-guide" type="button" class="text-xs text-blue-600 flex items-center gap-1 hover:underline w-full justify-center bg-blue-50 py-2 rounded-lg border border-blue-100">
-                                <span class="bg-blue-200 text-blue-700 rounded-full w-4 h-4 flex items-center justify-center font-bold text-[10px]">?</span>
-                                راهنمای زنجیره تبدیل واحد
-                            </button>
-                            <div id="material-guide" class="hidden bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] text-slate-600 mt-2 space-y-3 leading-5 shadow-inner">
-                                <div>
-                                    <strong class="text-teal-700 block mb-1">مثال پروفیل:</strong>
-                                    <ul class="list-disc list-inside space-y-1 pr-1 mt-2">
-                                        <li><b>اگر کیلویی می‌خرید و متری مصرف می‌کنید:</b><br>ضریب = وزن یک متر</li>
-                                        <li><b>اگر شاخه‌ای می‌خرید و متری مصرف می‌کنید:</b><br>ضریب = طول شاخه (مثلا 6)</li>
-                                    </ul>
-                                    <p class="mt-2 text-[10px] bg-yellow-50 p-1 rounded border border-yellow-100">نکته: واحدها را می‌توانید در تب "مدیریت داده‌ها" اضافه یا کم کنید.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flex justify-between items-center mb-3 border-b pb-2">
-                            <h3 class="font-bold text-slate-700 text-sm">مدیریت کالا/ماده اولیه</h3>
-                            <button id="btn-scraper-trigger" class="text-[10px] text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100 hover:bg-blue-100" title="اجرای ربات قیمت‌گیر">🤖 بروزرسانی قیمت‌ها</button>
-                        </div>
                         <form id="material-form" class="space-y-3">
                             <input type="hidden" id="mat-id">
-                            
-                            <!-- Basic Info -->
                             <select id="mat-category" class="input-field bg-slate-50 text-xs"><option value="">دسته‌بندی...</option></select>
-                            <input type="text" id="mat-name" class="input-field text-xs font-bold" placeholder="نام سیستمی کالا (مثال: پروفیل 40x40)" required>
-                            <input type="text" id="mat-display-name" class="input-field text-xs" placeholder="نام نمایشی در فاکتور (اختیاری)">
-                            
-                            <!-- Units (CHANGED TO SELECT) -->
-                            <div class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label class="text-[10px] text-slate-400 mr-1">واحد خرید</label>
-                                    <select id="mat-purchase-unit" class="input-field text-xs bg-white" required>
-                                        <option value="">بارگذاری...</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="text-[10px] text-slate-400 mr-1">واحد مصرف</label>
-                                    <select id="mat-consumption-unit" class="input-field text-xs bg-white" required>
-                                        <option value="">بارگذاری...</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <div class="grid grid-cols-2 gap-2 items-end">
-                                <div>
-                                    <label class="text-[10px] text-slate-400 mr-1">ضریب تبدیل (داخلی)</label>
-                                    <input type="number" step="any" id="mat-conversion-rate" class="input-field text-xs text-center" placeholder="1" value="1">
-                                </div>
-                                <div>
-                                    <label class="text-[10px] text-slate-400 mr-1">قیمت خرید (تومان)</label>
-                                    <input type="text" id="mat-price" class="input-field price-input text-xs text-teal-700 font-bold" placeholder="0" required>
-                                </div>
-                            </div>
-                            <p class="text-[9px] text-slate-400 leading-3 pr-1">
-                                * ضریب تبدیل: عددی که "واحد خرید" را به "واحد مصرف" تبدیل می‌کند.
-                            </p>
+                            <input type="text" id="mat-name" class="input-field text-xs font-bold" placeholder="نام کالا (مثال: پروفیل 40x40)" required>
+                            <input type="text" id="mat-display-name" class="input-field text-xs" placeholder="نام نمایشی (اختیاری)">
 
-                            <!-- Scraper Section -->
-                            <div class="pt-2 border-t border-dashed bg-slate-50 p-2 rounded mt-2">
-                                <div class="flex gap-2 mb-2">
-                                    <div class="w-2/3">
-                                        <label class="text-[10px] text-slate-400 mr-1">لینک منبع قیمت (سایت)</label>
-                                        <input type="url" id="mat-scraper-url" class="input-field text-xs text-left ltr" placeholder="https://...">
-                                    </div>
-                                    <div class="w-1/3">
-                                        <label class="text-[10px] text-slate-400 mr-1">وزن/ضریب محاسبه</label>
-                                        <input type="number" step="any" id="mat-scraper-factor" class="input-field text-xs text-center font-bold text-blue-600" style="direction: ltr;" placeholder="1">
-                                    </div>
+                            <!-- UNIT RELATIONS BUILDER -->
+                            <div class="bg-slate-50 p-3 rounded border border-slate-200">
+                                <div class="text-[10px] font-bold text-slate-600 mb-2">تعریف زنجیره واحدها:</div>
+                                
+                                <!-- Base Unit -->
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="text-[10px] w-16 shrink-0 text-slate-500">واحد پایه:</span>
+                                    <select id="mat-base-unit-select" class="input-field text-xs bg-white flex-grow font-bold"></select>
+                                </div>
+
+                                <!-- Dynamic Relations -->
+                                <div id="unit-relations-container" class="space-y-2 mb-2"></div>
+
+                                <!-- Add Relation Row -->
+                                <div class="flex gap-2 items-center mt-2 pt-2 border-t border-slate-200 border-dashed">
+                                    <button type="button" id="btn-add-relation" class="text-[10px] text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded border border-blue-200 w-full">+ افزودن تبدیل واحد جدید (مثل شاخه، بندیل)</button>
+                                </div>
+                            </div>
+
+                            <!-- SELECTION & PRICE -->
+                            <div class="grid grid-cols-2 gap-2 bg-teal-50 p-2 rounded border border-teal-100">
+                                <div>
+                                    <label class="text-[10px] text-teal-700 font-bold block mb-1">واحد خرید (انبار)</label>
+                                    <select id="mat-purchase-unit" class="input-field text-xs bg-white text-teal-900 font-bold" required></select>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-teal-700 font-bold block mb-1">واحد مصرف (تولید)</label>
+                                    <select id="mat-consumption-unit" class="input-field text-xs bg-white text-teal-900 font-bold" required></select>
+                                </div>
+                            </div>
+
+                            <!-- Auto Calculated Info -->
+                            <div class="flex justify-between items-center text-[10px] text-slate-400 px-1">
+                                <span>ضریب تبدیل محاسبه شده:</span>
+                                <span id="lbl-calc-rate" class="font-mono font-bold text-slate-700">1</span>
+                                <input type="hidden" id="mat-conversion-rate" value="1">
+                            </div>
+
+                            <div class="pt-2">
+                                <label class="text-[10px] text-slate-400 mr-1">قیمت واحد خرید (تومان)</label>
+                                <input type="text" id="mat-price" class="input-field price-input text-xs text-teal-700 font-bold text-center text-lg" placeholder="0" required>
+                            </div>
+
+                            <!-- Scraper -->
+                            <div class="pt-2 border-t border-dashed mt-2">
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="text-[10px] text-slate-400">لینک اسکرپر (اختیاری)</label>
+                                    <button type="button" id="btn-scraper-trigger" class="text-[9px] text-blue-500 bg-white border px-1 rounded hover:bg-slate-50">اجرا</button>
+                                </div>
+                                <div class="flex gap-2">
+                                    <input type="url" id="mat-scraper-url" class="input-field text-xs text-left ltr w-2/3" placeholder="https://...">
+                                    <input type="number" step="any" id="mat-scraper-factor" class="input-field text-xs text-center font-bold text-blue-600 w-1/3" style="direction: ltr;" placeholder="ضریب" title="ضریب اعمال قیمت سایت">
                                 </div>
                             </div>
 
@@ -214,11 +202,10 @@
             </div>
         </div>
 
-        <!-- TAB 3: DATA MANAGEMENT (NEW LAYOUT) -->
+        <!-- TAB 3: DATA MANAGEMENT -->
         <div id="tab-categories" class="hidden">
             <div class="max-w-4xl mx-auto mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                <!-- Categories Column -->
+                <!-- Categories -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                     <h3 class="font-bold text-slate-700 text-center mb-4 border-b pb-2">گروه‌بندی کالاها</h3>
                     <form id="category-form" class="flex gap-2 mb-4">
@@ -227,17 +214,15 @@
                     </form>
                     <div id="category-list" class="space-y-2 max-h-80 overflow-y-auto pr-1 custom-scrollbar"></div>
                 </div>
-
-                <!-- Units Column (NEW) -->
+                <!-- Units -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                    <h3 class="font-bold text-slate-700 text-center mb-4 border-b pb-2">واحدهای اندازه‌گیری</h3>
+                    <h3 class="font-bold text-slate-700 text-center mb-4 border-b pb-2">واحدهای اندازه‌گیری (جهانی)</h3>
                     <form id="unit-form" class="flex gap-2 mb-4">
                         <input type="text" id="unit-name" class="input-field text-xs" placeholder="نام واحد (مثلا: متر، شاخه)..." required>
                         <button class="btn btn-primary px-3 text-xl font-bold" type="submit">+</button>
                     </form>
                     <div id="unit-list" class="space-y-2 max-h-80 overflow-y-auto pr-1 custom-scrollbar"></div>
                 </div>
-
             </div>
         </div>
 
@@ -247,7 +232,7 @@
         </div>
     </div>
 
-    <!-- Modals (No Change) -->
+    <!-- Modals -->
     <div id="new-formula-modal" class="modal-overlay hidden">
         <div class="modal-content max-w-sm p-6">
             <h3 class="font-bold text-slate-800 mb-4">محصول جدید</h3>
