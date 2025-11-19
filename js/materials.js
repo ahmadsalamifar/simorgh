@@ -11,23 +11,86 @@ export function setupMaterials(refreshCallback) {
     document.getElementById('sort-materials').onchange = () => renderMaterials();
     document.getElementById('btn-add-relation').onclick = addRelationRow;
     
-    // تریگرها
     const baseUnitSelect = document.getElementById('mat-base-unit-select');
     if(baseUnitSelect) baseUnitSelect.onchange = updateUnitDropdowns;
     
     const scraperUnit = document.getElementById('mat-scraper-unit');
     if(scraperUnit) scraperUnit.onchange = calculateScraperFactor;
     
+    // --- بخش اجرای اسکرپر و نمایش گزارش ---
     const scraperBtn = document.getElementById('btn-scraper-trigger');
     if(scraperBtn) scraperBtn.onclick = async () => {
-        if(!confirm('بروزرسانی قیمت‌ها از سایت؟')) return;
-        scraperBtn.innerText = '...';
-        try { await api.runScraper(); refreshCallback(); } 
-        catch(e) { alert(e.message); } finally { scraperBtn.innerText = '🤖 بروزرسانی قیمت‌ها'; }
+        if(!confirm('آیا از بروزرسانی اتوماتیک قیمت‌ها اطمینان دارید؟')) return;
+        
+        scraperBtn.innerText = '⏳ در حال استعلام قیمت...';
+        scraperBtn.disabled = true;
+        
+        try { 
+            const result = await api.runScraper(); 
+            
+            if(result.success && result.report) {
+                showScraperReport(result.report); // نمایش پنجره گزارش
+                refreshCallback(); // رفرش لیست
+            } else {
+                alert('خطا در اجرا: ' + (result.error || 'پاسخ نامعتبر'));
+            }
+        } 
+        catch(e) { alert('خطای ارتباط: ' + e.message); } 
+        finally { 
+            scraperBtn.innerText = '🤖 بروزرسانی قیمت‌ها'; 
+            scraperBtn.disabled = false;
+        }
     };
 }
 
-// --- UI مدیریت واحدها (اصلاح شده: سایز بزرگتر) ---
+// --- تابع نمایش گزارش (Pop-up) ---
+function showScraperReport(report) {
+    // حذف مودال قبلی اگر باز مانده باشد
+    const existing = document.getElementById('report-modal');
+    if(existing) existing.remove();
+
+    let content = '';
+    if(report.length === 0) content = '<p class="text-center text-slate-400 py-4">هیچ موردی برای بررسی یافت نشد.</p>';
+
+    report.forEach(item => {
+        let style = { bg: 'bg-slate-50', border: 'border-slate-200', icon: '⚪', text: 'text-slate-600' };
+        
+        if(item.status === 'success') style = { bg: 'bg-emerald-50', border: 'border-emerald-200', icon: '✅', text: 'text-emerald-700' };
+        if(item.status === 'error') style = { bg: 'bg-rose-50', border: 'border-rose-200', icon: '❌', text: 'text-rose-700' };
+        
+        content += `
+        <div class="border rounded-lg p-3 mb-2 ${style.bg} ${style.border} text-sm">
+            <div class="flex justify-between font-bold ${style.text} mb-1">
+                <span>${style.icon} ${item.name}</span>
+                <span class="text-[10px] opacity-70 uppercase border px-1 rounded bg-white">${item.status}</span>
+            </div>
+            <div class="text-xs text-slate-600">${item.msg}</div>
+            ${item.detail ? `<div class="mt-1 pt-1 border-t border-slate-200/50 text-[10px] font-mono text-slate-500 dir-ltr text-left">${item.detail}</div>` : ''}
+            ${item.status === 'success' ? `<div class="flex justify-between mt-1 text-xs font-bold"><span class="text-rose-400 line-through">${item.old}</span> <span>➝</span> <span class="text-emerald-600">${item.new}</span></div>` : ''}
+        </div>`;
+    });
+
+    const html = `
+    <div class="fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" id="report-modal">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-fade-in">
+            <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">گزارش عملیات ربات</h3>
+                <button onclick="document.getElementById('report-modal').remove()" class="text-slate-400 hover:text-rose-500 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-4 overflow-y-auto flex-1 custom-scrollbar">
+                ${content}
+            </div>
+            <div class="p-4 border-t bg-slate-50">
+                <button onclick="document.getElementById('report-modal').remove()" class="btn btn-primary w-full">متوجه شدم</button>
+            </div>
+        </div>
+    </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+
+// --- UI مدیریت واحدها ---
 
 function renderRelationsUI() {
     const container = document.getElementById('unit-relations-container');
@@ -41,20 +104,14 @@ function renderRelationsUI() {
         const options = state.units.map(u => `<option value="${u.name}" ${u.name === rel.name ? 'selected' : ''}>${u.name}</option>`).join('');
         
         const row = document.createElement('div');
-        // ظاهر جدید: کادرهای بزرگتر و خوانا
         row.className = 'flex items-center gap-2 bg-white p-2 rounded border border-slate-200 mb-2 shadow-sm';
         
         row.innerHTML = `
             <input type="number" step="any" class="input-field h-9 w-16 text-center font-bold text-slate-700 text-xs border-slate-200 bg-slate-50 rel-qty-unit" value="${rel.qtyUnit || 1}" placeholder="#">
-            
             <select class="input-field h-9 w-28 px-2 text-xs rel-name-select border-slate-200 bg-white text-slate-700">${options}</select>
-            
             <span class="text-slate-400 text-lg">=</span>
-            
             <input type="number" step="any" class="input-field h-9 w-16 text-center font-bold text-slate-500 text-xs border-slate-200 bg-slate-50 rel-qty-base" value="${rel.qtyBase || 1}" placeholder="#">
-            
             <span class="text-slate-500 text-xs w-16 truncate base-unit-label font-bold">${baseUnitName}</span>
-            
             <button type="button" class="text-slate-300 hover:text-rose-500 px-2 text-lg mr-auto transition-colors btn-remove-rel">×</button>
         `;
         
@@ -76,7 +133,6 @@ function renderRelationsUI() {
         container.appendChild(row);
     });
     
-    // آپدیت نام واحد پایه در تمام سطرها
     document.querySelectorAll('.base-unit-label').forEach(el => el.innerText = baseUnitName);
 }
 
@@ -134,14 +190,10 @@ async function saveMaterial(cb) {
         category_id: document.getElementById('mat-category').value || null,
         price: parseLocaleNumber(document.getElementById('mat-price').value),
         scraper_url: document.getElementById('mat-scraper-url').value || null,
-        scraper_anchor: document.getElementById('mat-scraper-anchor').value || null, // فیلد جدید
-        
-        // مقادیر پیش‌فرض برای فیلدهای قدیمی دیتابیس
+        scraper_anchor: document.getElementById('mat-scraper-anchor').value || null,
         purchase_unit: document.getElementById('mat-price-unit').value, 
         consumption_unit: document.getElementById('mat-price-unit').value, 
         scraper_factor: 1,
-        
-        // ذخیره کامل ساختار واحدها
         unit_relations: JSON.stringify({
             base: document.getElementById('mat-base-unit-select').value,
             others: currentUnitRelations,
@@ -169,23 +221,19 @@ export function renderMaterials(filter='') {
     
     let list = state.materials.filter(m => m.name.includes(filter) || (m.display_name && m.display_name.includes(filter)));
     
-    // --- منطق مرتب‌سازی کامل ---
     list.sort((a,b) => {
-        // مرتب‌سازی بر اساس دسته‌بندی
         if(sort === 'category') {
             const getCatName = (id) => {
                 const c = state.categories.find(cat => cat.$id === id);
-                return c ? c.name : 'zzz'; // موارد بدون دسته بروند آخر
+                return c ? c.name : 'zzz'; 
             };
             return getCatName(a.category_id).localeCompare(getCatName(b.category_id));
         }
-        // سایر مرتب‌سازی‌ها
         if(sort === 'price_desc') return b.price - a.price;
         if(sort === 'price_asc') return a.price - b.price;
         if(sort === 'name_asc') return a.name.localeCompare(b.name);
         if(sort === 'update_asc') return new Date(a.$updatedAt) - new Date(b.$updatedAt);
-        
-        return new Date(b.$updatedAt) - new Date(a.$updatedAt); // پیش‌فرض: جدیدترین
+        return new Date(b.$updatedAt) - new Date(a.$updatedAt);
     });
     
     const el = document.getElementById('materials-container');
@@ -254,29 +302,20 @@ function editMat(id) {
         renderRelationsUI();
         updateUnitDropdowns();
         
-        // انتخاب مقادیر ذخیره شده
-        if(rels.price_unit) {
-             document.getElementById('mat-price-unit').value = rels.price_unit;
-        } else if(m.purchase_unit) {
-             document.getElementById('mat-price-unit').value = m.purchase_unit;
-        }
+        if(rels.price_unit) document.getElementById('mat-price-unit').value = rels.price_unit;
+        else if(m.purchase_unit) document.getElementById('mat-price-unit').value = m.purchase_unit;
 
-        // انتخاب واحد اسکرپر
-        if(rels.scraper_unit) {
-             document.getElementById('mat-scraper-unit').value = rels.scraper_unit;
-        }
+        if(rels.scraper_unit) document.getElementById('mat-scraper-unit').value = rels.scraper_unit;
         
         calculateScraperFactor(); 
 
     } catch(e) {
-        console.error("Error parsing unit relations", e);
         currentUnitRelations = [];
         renderRelationsUI();
     }
     
     document.getElementById('mat-price').value = formatPrice(m.price);
     document.getElementById('mat-scraper-url').value = m.scraper_url || '';
-    // بازگردانی انکر تکست
     document.getElementById('mat-scraper-anchor').value = m.scraper_anchor || '';
     
     const btn = document.getElementById('mat-submit-btn');
@@ -292,8 +331,13 @@ function resetMatForm() {
     currentUnitRelations = [];
     renderRelationsUI();
     updateUnitDropdowns();
-    
     const btn = document.getElementById('mat-submit-btn');
     if(btn) btn.innerText = 'ذخیره کالا';
     document.getElementById('mat-cancel-btn').classList.add('hidden');
 }
+```
+
+حالا:
+۱. بعد از زدن دکمه **«🤖 بروزرسانی قیمت‌ها»**، یک پنجره باز می‌شود.
+۲. تمام جزئیات (نام کالا، قیمت قدیم، قیمت جدید و روش پیدا کردن) در آن لیست می‌شود.
+۳. می‌توانید ببینید که آیا ربات قیمت را درست پیدا کرده یا نه.
