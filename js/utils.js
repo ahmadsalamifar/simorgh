@@ -7,6 +7,19 @@ export function formatDate(d) {
     return d ? new Date(d).toLocaleDateString('fa-IR') : '';
 }
 
+// تابع جدید: ساخت نشانگر تاریخ (سبز/نارنجی)
+export function getDateBadge(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const diffTime = Math.abs(new Date() - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    const colorClass = diffDays < 7 ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-orange-100 text-orange-700 border-orange-200';
+    const text = formatDate(dateString);
+    
+    return `<span class="text-[10px] px-1.5 py-0.5 rounded border ${colorClass}">${text}</span>`;
+}
+
 export function formatInput(el) {
     const r = el.value.replace(/[^0-9.]/g, '');
     el.value = r ? parseFloat(r).toLocaleString('en-US') : '';
@@ -19,8 +32,10 @@ export function switchTab(id) {
         if (el) el.classList.add('hidden');
         if (btn) btn.classList.remove('active');
     });
-    document.getElementById('tab-' + id).classList.remove('hidden');
-    document.getElementById('btn-tab-' + id).classList.add('active');
+    const target = document.getElementById('tab-' + id);
+    const targetBtn = document.getElementById('btn-tab-' + id);
+    if (target) target.classList.remove('hidden');
+    if (targetBtn) targetBtn.classList.add('active');
 }
 
 export function openModal(id) {

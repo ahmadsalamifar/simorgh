@@ -1,18 +1,30 @@
 import { api } from './api.js';
 import { state, APPWRITE_CONFIG } from './config.js';
-import { formatPrice, formatDate, openModal, closeModal } from './utils.js';
+import { formatPrice, formatDate, getDateBadge, openModal, closeModal } from './utils.js';
 
 export function setupFormulas(refreshCallback) {
     document.getElementById('btn-open-new-formula').onclick = () => openModal('new-formula-modal');
     document.getElementById('btn-create-formula').onclick = () => createFormula(refreshCallback);
     document.getElementById('btn-cancel-formula').onclick = () => closeModal('new-formula-modal');
+    
     document.getElementById('search-formulas').oninput = (e) => renderFormulaList(e.target.value);
-    document.getElementById('form-add-comp').onsubmit = (e) => { e.preventDefault(); addComp(refreshCallback); };
+    
+    document.getElementById('form-add-comp').onsubmit = (e) => { 
+        e.preventDefault(); 
+        addComp(refreshCallback); 
+    };
+
     document.getElementById('inp-labor').onchange = (e) => updateCost('labor', e.target.value, refreshCallback);
     document.getElementById('inp-overhead').onchange = (e) => updateCost('overhead', e.target.value, refreshCallback);
     document.getElementById('inp-profit').onchange = (e) => updateCost('profit', e.target.value, refreshCallback);
-    document.getElementById('active-formula-name').onclick = () => renameFormula(refreshCallback);
-    document.getElementById('btn-delete-formula').onclick = () => deleteFormula(refreshCallback);
+    
+    // اتصال دکمه‌های ویرایش و حذف
+    const renameBtn = document.getElementById('active-formula-name');
+    if(renameBtn) renameBtn.onclick = () => renameFormula(refreshCallback);
+
+    const delBtn = document.getElementById('btn-delete-formula');
+    if(delBtn) delBtn.onclick = () => deleteFormula(refreshCallback);
+
     document.getElementById('comp-filter').onchange = updateCompSelect;
 }
 
@@ -56,12 +68,13 @@ export function selectFormula(id) {
     
     const f = state.formulas.find(x => x.$id === id);
     if(f) renderFormulaDetail(f);
-    
+
     if(window.innerWidth < 1024) document.getElementById('detail-panel').scrollIntoView({behavior: 'smooth'});
 }
 
 export function renderFormulaDetail(f) {
     document.getElementById('active-formula-name').innerText = f.name;
+    document.getElementById('active-formula-date').innerText = 'ویرایش: ' + formatDate(f.$updatedAt);
     document.getElementById('inp-labor').value = formatPrice(f.labor);
     document.getElementById('inp-overhead').value = formatPrice(f.overhead);
     document.getElementById('inp-profit').value = f.profit;
@@ -71,58 +84,74 @@ export function renderFormulaDetail(f) {
     
     updateCompSelect();
     
-    // پارس کردن امن لیست کالاها
-    let comps = [];
-    try {
-        comps = JSON.parse(f.components || '[]');
-    } catch (err) {
-        console.error('JSON Error', err);
-        comps = [];
-    }
-
+    // *** اصلاح مهم: استفاده از components ***
+    const comps = JSON.parse(f.components || '[]');
     const listEl = document.getElementById('formula-comps-list');
     
-    if (comps.length === 0) {
-        listEl.innerHTML = '<div class="p-8 text-center text-slate-400 text-xs">هنوز کالایی اضافه نشده است</div>';
-    } else {
-        listEl.innerHTML = comps.map((c, idx) => {
-            let name='-', unit='-', price=0, total=0;
+    listEl.innerHTML = comps.length === 0 
+        ? '<div class="p-8 text-center text-slate-400 text-xs">هنوز کالایی اضافه نشده است</div>' 
+        : comps.map((c, idx) => {
+            let name='-', unit='-', price=0, total=0, dateBadge='';
+            
             if(c.type==='mat') {
-                const m = state.materials.find(x=>x.$id===c.id);
-                if(m) { name=m.name; unit=m.unit; price=m.price; } 
-                else { name='(کالا حذف شده)'; }
+                // جستجو در لیست مواد
+                const m = state.materials.find(x => x.$id === c.id);
+                if(m) { 
+                    name = m.name; 
+                    unit = m.unit; 
+                    price = m.price; 
+                    dateBadge = getDateBadge(m.$updatedAt); // نمایش تاریخ بروزرسانی کالا
+                } else { 
+                    name = '(کالا حذف شده)'; 
+                }
             } else {
-                const sub = state.formulas.find(x=>x.$id===c.id);
-                if(sub) { name=`🔗 ${sub.name}`; unit='عدد'; price=calculateCost(sub).final; } 
-                else { name='(فرمول حذف شده)'; }
+                const sub = state.formulas.find(x => x.$id === c.id);
+                if(sub) { 
+                    name = `🔗 ${sub.name}`; 
+                    unit = 'عدد'; 
+                    price = calculateCost(sub).final; 
+                    dateBadge = getDateBadge(sub.$updatedAt);
+                } else { 
+                    name = '(فرمول حذف شده)'; 
+                }
             }
             total = price * c.qty;
+            
             return `
-            <div class="flex justify-between items-center p-3 text-sm border-b border-slate-50">
-                <div><div class="font-bold text-slate-700 text-xs">${name}</div><div class="text-[10px] text-slate-400 mt-0.5">${c.qty} ${unit} × ${formatPrice(price)}</div></div>
-                <div class="flex items-center gap-2"><span class="font-mono font-bold text-slate-600 text-xs">${formatPrice(total)}</span><button class="text-rose-400 px-2 btn-del-comp" data-idx="${idx}">×</button></div>
+            <div class="flex justify-between items-center p-3 text-sm border-b border-slate-50 hover:bg-slate-50">
+                <div class="flex-grow">
+                    <div class="font-bold text-slate-700 text-xs flex items-center gap-2">
+                        ${name} 
+                        ${dateBadge} <!-- نمایش تاریخ -->
+                    </div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">
+                        <span class="bg-slate-100 px-1 rounded">${c.qty}</span> ${unit} × ${formatPrice(price)}
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="font-mono font-bold text-slate-600 text-xs">${formatPrice(total)}</span>
+                    <button class="text-rose-400 hover:text-rose-600 px-2 py-1 rounded btn-del-comp" data-idx="${idx}">×</button>
+                </div>
             </div>`;
         }).join('');
 
-        listEl.querySelectorAll('.btn-del-comp').forEach(btn => {
-            btn.onclick = () => removeComp(f.$id, parseInt(btn.dataset.idx), () => { 
-                // رفرش فوری فقط همین بخش برای سرعت بیشتر
-                 api.get(APPWRITE_CONFIG.COLS.FORMS, f.$id).then(updatedF => {
-                     const index = state.formulas.findIndex(i => i.$id === f.$id);
-                     if(index !== -1) state.formulas[index] = updatedF;
-                     renderFormulaDetail(updatedF);
-                 });
-            });
+    // اتصال دکمه حذف
+    listEl.querySelectorAll('.btn-del-comp').forEach(btn => {
+        btn.onclick = () => removeComp(f.$id, parseInt(btn.dataset.idx), () => { 
+             // رفرش داخلی و سریع
+             api.get(APPWRITE_CONFIG.COLS.FORMS, f.$id).then(updatedF => {
+                 const index = state.formulas.findIndex(i => i.$id === f.$id);
+                 if(index !== -1) state.formulas[index] = updatedF;
+                 renderFormulaDetail(updatedF);
+             });
         });
-    }
+    });
 }
 
 export function calculateCost(f) {
     if(!f) return {matCost:0, sub:0, profit:0, final:0};
     let matCost=0; 
-    let comps = [];
-    try { comps = JSON.parse(f.components || '[]'); } catch(e){}
-    
+    const comps = JSON.parse(f.components || '[]');
     comps.forEach(c => {
         if(c.type==='mat') {
             const m = state.materials.find(x => x.$id === c.id);
@@ -137,19 +166,21 @@ export function calculateCost(f) {
     return {matCost, sub, profit, final: sub+profit};
 }
 
+// --- Actions ---
+
 async function addComp(cb) {
     if(!state.activeFormulaId) return;
     const val = document.getElementById('comp-select').value;
     const qty = parseFloat(document.getElementById('comp-qty').value);
-    if(!val || !qty) return;
+    if(!val || !qty) { alert('مقادیر را وارد کنید'); return; }
 
     const [typePrefix, id] = val.split(':');
     const type = typePrefix === 'MAT' ? 'mat' : 'form';
-    if(type === 'form' && id === state.activeFormulaId) { alert('خطا: نمی‌توانید محصول را در خودش استفاده کنید'); return; }
+    
+    if(type === 'form' && id === state.activeFormulaId) { alert('خطا: لوپ!'); return; }
     
     const f = state.formulas.find(x => x.$id === state.activeFormulaId);
-    let comps = [];
-    try { comps = JSON.parse(f.components || '[]'); } catch(e){}
+    let comps = JSON.parse(f.components || '[]');
     
     const exist = comps.find(c => c.id === id && c.type === type);
     if(exist) exist.qty += qty; else comps.push({id, type, qty});
@@ -157,15 +188,13 @@ async function addComp(cb) {
     try {
         await api.update(APPWRITE_CONFIG.COLS.FORMS, state.activeFormulaId, { components: JSON.stringify(comps) });
         document.getElementById('comp-qty').value = '';
-        cb(); // فراخوانی رفرش اصلی که حالا updateUI را با دقت انجام می‌دهد
+        cb(); // فراخوانی رفرش اصلی
     } catch(e) { alert(e.message); }
 }
 
 async function removeComp(fid, idx, localRefresh) {
     const f = state.formulas.find(x => x.$id === fid);
-    let comps = [];
-    try { comps = JSON.parse(f.components || '[]'); } catch(e){}
-    
+    let comps = JSON.parse(f.components || '[]');
     comps.splice(idx, 1);
     try {
         await api.update(APPWRITE_CONFIG.COLS.FORMS, fid, { components: JSON.stringify(comps) });
@@ -182,10 +211,13 @@ async function updateCost(key, val, cb) {
 }
 
 async function renameFormula(cb) {
-    const n = prompt('نام جدید:', document.getElementById('active-formula-name').innerText);
-    if(n) {
-        try { await api.update(APPWRITE_CONFIG.COLS.FORMS, state.activeFormulaId, { name: n }); cb(); }
-        catch(e) { alert(e.message); }
+    const curTitle = document.getElementById('active-formula-name').innerText;
+    const n = prompt('نام جدید:', curTitle);
+    if(n && n !== curTitle) {
+        try { 
+            await api.update(APPWRITE_CONFIG.COLS.FORMS, state.activeFormulaId, { name: n }); 
+            cb(); 
+        } catch(e) { alert(e.message); }
     }
 }
 
@@ -203,9 +235,11 @@ export function updateCompSelect() {
     const sel = document.getElementById('comp-select');
     const f = document.getElementById('comp-filter').value;
     if(!sel) return;
+    
     let h = '<option value="">انتخاب...</option>';
     if(f === 'FORM') {
-        h += state.formulas.filter(x => x.$id !== state.activeFormulaId).map(x => `<option value="FORM:${x.$id}">🔗 ${x.name}</option>`).join('');
+        h += state.formulas.filter(x => x.$id !== state.activeFormulaId)
+            .map(x => `<option value="FORM:${x.$id}">🔗 ${x.name}</option>`).join('');
     } else {
         state.categories.forEach(cat => {
             if(f && f !== cat.$id) return;

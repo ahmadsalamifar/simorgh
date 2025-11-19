@@ -1,4 +1,4 @@
-import { account, state } from './config.js'; // state اضافه شد
+import { account, state } from './config.js';
 import { fetchAllData } from './api.js';
 import { switchTab, formatInput } from './utils.js';
 import * as Formulas from './formulas.js';
@@ -13,37 +13,37 @@ async function refreshApp() {
 }
 
 function updateUI() {
-    // 1. رفرش لیست سمت راست
+    // 1. Formulas List
     Formulas.renderFormulaList();
     
-    // 2. بخش مهم: اگر فرمولی باز است، جزئیاتش (شامل لیست کالاها) را دوباره رندر کن
+    // 2. Active Formula Detail (Important!)
     if (state.activeFormulaId) {
         const f = state.formulas.find(x => x.$id === state.activeFormulaId);
         if (f) {
             Formulas.renderFormulaDetail(f);
         } else {
-            // اگر فرمول حذف شده بود، برگرد به حالت خالی
             state.activeFormulaId = null;
             document.getElementById('formula-detail-view').classList.add('hidden');
             document.getElementById('formula-detail-empty').classList.remove('hidden');
         }
     }
     
-    // 3. رفرش بقیه تب‌ها
+    // 3. Materials
     Materials.renderMaterials();
+    
+    // 4. Categories & Store
     Categories.renderCategories(refreshApp);
     Store.renderStore(refreshApp);
     
-    // 4. آپدیت دراپ‌داون‌ها
+    // 5. Dropdowns
     Formulas.updateCompSelect(); 
     
-    // پر کردن دراپ‌داون دسته در فرم کالا
     const matCat = document.getElementById('mat-category');
     if(matCat) {
         const currentVal = matCat.value;
         const c = state.categories.map(x => `<option value="${x.$id}">${x.name}</option>`).join('');
         matCat.innerHTML = '<option value="">بدون دسته</option>' + c;
-        matCat.value = currentVal; // حفظ انتخاب قبلی
+        if(currentVal) matCat.value = currentVal;
     }
 }
 

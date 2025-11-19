@@ -50,7 +50,10 @@
                     </div>
                     <div id="formula-detail-view" class="hidden flex-col h-full">
                         <div class="p-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                            <h2 id="active-formula-name" class="text-base font-bold text-slate-800 cursor-pointer truncate hover:text-teal-600">---</h2>
+                            <div>
+                                <h2 id="active-formula-name" class="text-base font-bold text-slate-800 cursor-pointer truncate hover:text-teal-600 border-b border-dashed border-slate-300 pb-1" title="برای ویرایش نام کلیک کنید">---</h2>
+                                <span class="text-[10px] text-slate-400" id="active-formula-date"></span>
+                            </div>
                             <div class="flex gap-2">
                                 <button id="btn-print" class="btn btn-white border border-slate-200 text-slate-600 py-1.5 px-3 text-xs shadow-none" type="button">🖨</button>
                                 <button id="btn-delete-formula" class="btn btn-white border border-rose-200 text-rose-500 py-1.5 px-3 text-xs shadow-none" type="button">🗑</button>
@@ -112,7 +115,13 @@
                     <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 min-h-[500px]">
                         <div class="flex gap-2 mb-4">
                             <input type="text" id="search-materials" placeholder="جستجو..." class="input-field pl-4 h-10 text-xs">
-                            <select id="sort-materials" class="input-field w-auto text-xs h-10"><option value="name_asc">الفبا</option><option value="date_desc">جدیدترین</option></select>
+                            <select id="sort-materials" class="input-field w-auto text-xs h-10">
+                                <option value="update_desc">بروزرسانی (جدیدترین)</option>
+                                <option value="update_asc">بروزرسانی (قدیمی‌ترین)</option>
+                                <option value="name_asc">حروف الفبا</option>
+                                <option value="price_desc">قیمت (گران‌ترین)</option>
+                                <option value="price_asc">قیمت (ارزان‌ترین)</option>
+                            </select>
                         </div>
                         <div id="materials-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
                     </div>
