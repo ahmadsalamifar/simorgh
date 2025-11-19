@@ -7,17 +7,18 @@ export function formatDate(d) {
     return d ? new Date(d).toLocaleDateString('fa-IR') : '';
 }
 
-// تابع جدید: ساخت نشانگر تاریخ (سبز/نارنجی)
 export function getDateBadge(dateString) {
     if (!dateString) return '';
     const date = new Date(dateString);
     const diffTime = Math.abs(new Date() - date);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    const colorClass = diffDays < 7 ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-orange-100 text-orange-700 border-orange-200';
-    const text = formatDate(dateString);
+    // زیر ۷ روز = سبز (جدید)، بیشتر = نارنجی (قدیمی)
+    const colorClass = diffDays < 7 
+        ? 'bg-emerald-100 text-emerald-700 border-emerald-200' 
+        : 'bg-orange-100 text-orange-700 border-orange-200';
     
-    return `<span class="text-[10px] px-1.5 py-0.5 rounded border ${colorClass}">${text}</span>`;
+    return `<span class="text-[10px] px-1.5 py-0.5 rounded border ${colorClass}">${formatDate(dateString)}</span>`;
 }
 
 export function formatInput(el) {

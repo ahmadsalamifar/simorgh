@@ -7,16 +7,20 @@ import * as Categories from './categories.js';
 import * as Store from './store.js';
 import * as Print from './print.js';
 
+// تابع رفرش کلی (زمانی که ساختار داده‌ها عوض می‌شود مثل حذف فرمول)
 async function refreshApp() {
     await fetchAllData();
     updateUI();
 }
 
 function updateUI() {
-    // 1. Formulas List
+    // 1. رندر لیست‌ها
     Formulas.renderFormulaList();
+    Materials.renderMaterials();
+    Categories.renderCategories(refreshApp);
+    Store.renderStore(refreshApp);
     
-    // 2. Active Formula Detail (Important!)
+    // 2. اگر فرمولی باز است، آن را دوباره رندر کن
     if (state.activeFormulaId) {
         const f = state.formulas.find(x => x.$id === state.activeFormulaId);
         if (f) {
@@ -28,22 +32,17 @@ function updateUI() {
         }
     }
     
-    // 3. Materials
-    Materials.renderMaterials();
+    // 3. آپدیت دراپ‌داون‌ها
+    Formulas.updateDropdowns();
+    Formulas.updateCompSelect();
     
-    // 4. Categories & Store
-    Categories.renderCategories(refreshApp);
-    Store.renderStore(refreshApp);
-    
-    // 5. Dropdowns
-    Formulas.updateCompSelect(); 
-    
+    // دراپ‌داون دسته در تب مواد
     const matCat = document.getElementById('mat-category');
     if(matCat) {
-        const currentVal = matCat.value;
+        const val = matCat.value;
         const c = state.categories.map(x => `<option value="${x.$id}">${x.name}</option>`).join('');
         matCat.innerHTML = '<option value="">بدون دسته</option>' + c;
-        if(currentVal) matCat.value = currentVal;
+        matCat.value = val;
     }
 }
 
@@ -70,10 +69,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             el.addEventListener('input', () => formatInput(el));
         });
 
+        // اولین رندر
         updateUI();
         switchTab('formulas');
         
     } catch (err) {
+        console.error(err);
         document.getElementById('loading-text').innerText = err.message;
         document.getElementById('loading-text').style.color = 'red';
     }
