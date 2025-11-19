@@ -114,7 +114,7 @@
                 <div class="w-full md:w-1/3 order-2 md:order-1">
                     <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 md:sticky md:top-4 h-auto overflow-y-auto max-h-[90vh]">
                         
-                        <!-- GUIDE BUTTON (NEW) -->
+                        <!-- GUIDE BUTTON -->
                         <div class="mb-4">
                             <button id="btn-toggle-guide" type="button" class="text-xs text-blue-600 flex items-center gap-1 hover:underline w-full justify-center bg-blue-50 py-2 rounded-lg border border-blue-100">
                                 <span class="bg-blue-200 text-blue-700 rounded-full w-4 h-4 flex items-center justify-center font-bold text-[10px]">?</span>
@@ -155,15 +155,44 @@
                             <input type="text" id="mat-name" class="input-field text-xs font-bold" placeholder="نام سیستمی کالا (مثال: پروفیل 40x40)" required>
                             <input type="text" id="mat-display-name" class="input-field text-xs" placeholder="نام نمایشی در فاکتور (اختیاری)">
                             
-                            <!-- Units & Price -->
+                            <!-- Units & Price (CHANGED TO SELECT) -->
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
                                     <label class="text-[10px] text-slate-400 mr-1">واحد خرید</label>
-                                    <input type="text" id="mat-purchase-unit" class="input-field text-xs" placeholder="مثال: شاخه" required>
+                                    <select id="mat-purchase-unit" class="input-field text-xs bg-white h-[34px]" required>
+                                        <option value="" disabled selected>انتخاب...</option>
+                                        <option value="عدد">عدد</option>
+                                        <option value="شاخه">شاخه</option>
+                                        <option value="متر">متر</option>
+                                        <option value="کیلوگرم">کیلوگرم</option>
+                                        <option value="تن">تن</option>
+                                        <option value="گرم">گرم</option>
+                                        <option value="کارتن">کارتن</option>
+                                        <option value="بسته">بسته</option>
+                                        <option value="بندیل">بندیل</option>
+                                        <option value="جفت">جفت</option>
+                                        <option value="متر مربع">متر مربع</option>
+                                        <option value="لیتر">لیتر</option>
+                                        <option value="دست">دست</option>
+                                        <option value="سایر">سایر</option>
+                                    </select>
                                 </div>
                                 <div>
                                     <label class="text-[10px] text-slate-400 mr-1">واحد مصرف</label>
-                                    <input type="text" id="mat-consumption-unit" class="input-field text-xs" placeholder="مثال: متر" required>
+                                    <select id="mat-consumption-unit" class="input-field text-xs bg-white h-[34px]" required>
+                                        <option value="" disabled selected>انتخاب...</option>
+                                        <option value="عدد">عدد</option>
+                                        <option value="شاخه">شاخه</option>
+                                        <option value="متر">متر</option>
+                                        <option value="سانتی‌متر">سانتی‌متر</option>
+                                        <option value="کیلوگرم">کیلوگرم</option>
+                                        <option value="گرم">گرم</option>
+                                        <option value="متر مربع">متر مربع</option>
+                                        <option value="لیتر">لیتر</option>
+                                        <option value="دست">دست</option>
+                                        <option value="جفت">جفت</option>
+                                        <option value="سایر">سایر</option>
+                                    </select>
                                 </div>
                             </div>
                             
@@ -181,7 +210,7 @@
                                 * ضریب تبدیل داخلی: مثلاً اگر خرید "شاخه" است و مصرف "متر"، و هر شاخه ۶ متر است، ضریب = ۶.
                             </p>
 
-                            <!-- Scraper Section (UPDATED) -->
+                            <!-- Scraper Section -->
                             <div class="pt-2 border-t border-dashed bg-slate-50 p-2 rounded mt-2">
                                 <div class="flex gap-2 mb-2">
                                     <div class="w-2/3">
