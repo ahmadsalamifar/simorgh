@@ -118,27 +118,17 @@
                         <div class="mb-4">
                             <button id="btn-toggle-guide" type="button" class="text-xs text-blue-600 flex items-center gap-1 hover:underline w-full justify-center bg-blue-50 py-2 rounded-lg border border-blue-100">
                                 <span class="bg-blue-200 text-blue-700 rounded-full w-4 h-4 flex items-center justify-center font-bold text-[10px]">?</span>
-                                راهنمای ثبت واحدها و اسکرپر
+                                راهنمای زنجیره تبدیل واحد
                             </button>
                             <div id="material-guide" class="hidden bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] text-slate-600 mt-2 space-y-3 leading-5 shadow-inner">
                                 <div>
-                                    <strong class="text-teal-700 block mb-1">مثال: پروفیل آهن ۴۰×۴۰</strong>
-                                    <ul class="list-disc list-inside space-y-1 pr-1">
-                                        <li><b>واحد خرید:</b> "شاخه" (چون انباردار شاخه می‌شمارد).</li>
-                                        <li><b>واحد مصرف:</b> "متر" (چون در فرمول متری استفاده می‌شود).</li>
-                                        <li><b>ضریب تبدیل داخلی:</b> "6" (چون هر شاخه ۶ متر است).</li>
+                                    <strong class="text-teal-700 block mb-1">زنجیره تبدیل (بندیل -> شاخه -> متر)</strong>
+                                    <p>شما همیشه باید «واحد خرید» را به «واحد مصرف» تبدیل کنید.</p>
+                                    <ul class="list-disc list-inside space-y-1 pr-1 mt-2">
+                                        <li><b>اگر کیلویی می‌خرید و متری مصرف می‌کنید:</b><br>ضریب = وزن یک متر (مثلا 2.5)</li>
+                                        <li><b>اگر شاخه‌ای می‌خرید و متری مصرف می‌کنید:</b><br>ضریب = طول شاخه (مثلا 6)</li>
+                                        <li><b>اگر بندیل می‌خرید و متری مصرف می‌کنید:</b><br>ضریب = تعداد شاخه در بندیل × طول شاخه<br>(مثلا ۱۰۰ × ۶ = ۶۰۰)</li>
                                     </ul>
-                                </div>
-                                <div class="border-t border-dashed border-slate-300 pt-2">
-                                    <strong class="text-blue-700 block mb-1">تنظیمات اسکرپر (قیمت‌گیر):</strong>
-                                    <p>سایت قیمت را "کیلوگرم" (مثلا ۳۷,۰۰۰) می‌دهد، اما واحد خرید شما "شاخه" است.</p>
-                                    <ul class="list-disc list-inside space-y-1 pr-1 mt-1">
-                                        <li><b>لینک:</b> آدرس صفحه محصول در سایت.</li>
-                                        <li><b>وزن/ضریب محاسبه:</b> وزن هر شاخه را وارد کنید (مثلا <b>15.5</b>).</li>
-                                    </ul>
-                                    <div class="bg-white p-2 rounded border border-slate-200 mt-2 text-[10px]">
-                                        نتیجه: ربات قیمت ۳۷,۰۰۰ را می‌گیرد، در ۱۵.۵ ضرب می‌کند و قیمت هر شاخه (۵۷۳,۵۰۰) را ثبت می‌کند.
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -155,44 +145,39 @@
                             <input type="text" id="mat-name" class="input-field text-xs font-bold" placeholder="نام سیستمی کالا (مثال: پروفیل 40x40)" required>
                             <input type="text" id="mat-display-name" class="input-field text-xs" placeholder="نام نمایشی در فاکتور (اختیاری)">
                             
-                            <!-- Units & Price (CHANGED TO SELECT) -->
+                            <!-- Units (SMART LIST) -->
+                            <!-- این لیست به عنوان مرجع استفاده می‌شود -->
+                            <datalist id="unit-list">
+                                <option value="عدد">
+                                <option value="شاخه">
+                                <option value="شاخه ۶ متری">
+                                <option value="شاخه ۱۲ متری">
+                                <option value="متر">
+                                <option value="سانتی‌متر">
+                                <option value="کیلوگرم">
+                                <option value="گرم">
+                                <option value="تن">
+                                <option value="بندیل">
+                                <option value="کارتن">
+                                <option value="بسته">
+                                <option value="متر مربع">
+                                <option value="متر مکعب">
+                                <option value="لیتر">
+                                <option value="جفت">
+                                <option value="دست">
+                                <option value="ست">
+                                <option value="ورق">
+                            </datalist>
+
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
                                     <label class="text-[10px] text-slate-400 mr-1">واحد خرید</label>
-                                    <select id="mat-purchase-unit" class="input-field text-xs bg-white h-[34px]" required>
-                                        <option value="" disabled selected>انتخاب...</option>
-                                        <option value="عدد">عدد</option>
-                                        <option value="شاخه">شاخه</option>
-                                        <option value="متر">متر</option>
-                                        <option value="کیلوگرم">کیلوگرم</option>
-                                        <option value="تن">تن</option>
-                                        <option value="گرم">گرم</option>
-                                        <option value="کارتن">کارتن</option>
-                                        <option value="بسته">بسته</option>
-                                        <option value="بندیل">بندیل</option>
-                                        <option value="جفت">جفت</option>
-                                        <option value="متر مربع">متر مربع</option>
-                                        <option value="لیتر">لیتر</option>
-                                        <option value="دست">دست</option>
-                                        <option value="سایر">سایر</option>
-                                    </select>
+                                    <!-- استفاده از input با list به جای select -->
+                                    <input type="text" list="unit-list" id="mat-purchase-unit" class="input-field text-xs" placeholder="انتخاب یا تایپ..." required>
                                 </div>
                                 <div>
                                     <label class="text-[10px] text-slate-400 mr-1">واحد مصرف</label>
-                                    <select id="mat-consumption-unit" class="input-field text-xs bg-white h-[34px]" required>
-                                        <option value="" disabled selected>انتخاب...</option>
-                                        <option value="عدد">عدد</option>
-                                        <option value="شاخه">شاخه</option>
-                                        <option value="متر">متر</option>
-                                        <option value="سانتی‌متر">سانتی‌متر</option>
-                                        <option value="کیلوگرم">کیلوگرم</option>
-                                        <option value="گرم">گرم</option>
-                                        <option value="متر مربع">متر مربع</option>
-                                        <option value="لیتر">لیتر</option>
-                                        <option value="دست">دست</option>
-                                        <option value="جفت">جفت</option>
-                                        <option value="سایر">سایر</option>
-                                    </select>
+                                    <input type="text" list="unit-list" id="mat-consumption-unit" class="input-field text-xs" placeholder="انتخاب یا تایپ..." required>
                                 </div>
                             </div>
                             
@@ -207,7 +192,7 @@
                                 </div>
                             </div>
                             <p class="text-[9px] text-slate-400 leading-3 pr-1">
-                                * ضریب تبدیل داخلی: مثلاً اگر خرید "شاخه" است و مصرف "متر"، و هر شاخه ۶ متر است، ضریب = ۶.
+                                * مثال: اگر خرید "شاخه" است و مصرف "متر"، و هر شاخه ۶ متر است، ضریب = ۶.
                             </p>
 
                             <!-- Scraper Section -->
@@ -219,12 +204,11 @@
                                     </div>
                                     <div class="w-1/3">
                                         <label class="text-[10px] text-slate-400 mr-1">وزن/ضریب محاسبه</label>
-                                        <!-- direction: ltr برای تایپ راحت اعداد اعشاری -->
                                         <input type="number" step="any" id="mat-scraper-factor" class="input-field text-xs text-center font-bold text-blue-600" style="direction: ltr;" placeholder="1">
                                     </div>
                                 </div>
                                 <p class="text-[9px] text-slate-400 leading-3">
-                                    * اگر قیمت سایت "کیلوگرم" است و واحد شما "شاخه ۱۵.۵۲ کیلویی" است، در کادر کوچک عدد <b>15.52</b> را وارد کنید.
+                                    * اگر قیمت سایت "کیلوگرم" است و واحد شما "شاخه ۱۵.۵۲ کیلویی" است، اینجا عدد <b>15.52</b> را وارد کنید.
                                 </p>
                             </div>
 
