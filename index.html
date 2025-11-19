@@ -5,52 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>سامانه جامع سیمرغ گستر پویا</title>
     
-    <!-- 1. Tailwind CSS (فقط برای کلاس‌های داخل HTML) -->
+    <!-- کتابخانه‌ها -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 2. Appwrite SDK -->
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.0"></script>
-    
-    <!-- 3. Font -->
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
     
-    <!-- 4. لینک به فایل استایل جداگانه -->
+    <!-- استایل -->
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-slate-100 text-slate-800">
+<body>
 
-    <!-- Loading Screen -->
+    <!-- لودینگ -->
     <div id="loading-screen">
         <div class="spinner"></div>
         <h2 class="text-xl font-bold mb-2">سیمرغ گستر پویا</h2>
         <p class="text-xs text-slate-400" id="loading-text">در حال اتصال...</p>
     </div>
 
-    <!-- Main Content -->
-    <div id="app-content" class="max-w-7xl mx-auto p-3 md:p-6 hidden">
+    <!-- محتوای اصلی -->
+    <div id="app-content" class="hidden">
         
-        <!-- Header -->
-        <header class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-            <div class="text-center md:text-right w-full md:w-auto">
-                <h1 class="text-xl md:text-2xl font-black text-slate-800">
-                    ماشین حساب <span class="text-teal-600">سیمرغ</span>
-                </h1>
-            </div>
-            <div class="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end">
-                <div class="status-badge">
-                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> متصل
-                </div>
-                <button id="btn-open-store" class="btn btn-secondary text-xs px-3" type="button">
-                    🏦 بانک فرمول
-                </button>
+        <header class="app-header">
+            <div><h1 class="text-xl md:text-2xl font-black text-slate-800">ماشین حساب <span class="text-teal-600">سیمرغ</span></h1></div>
+            <div class="flex items-center gap-2">
+                <div class="status-badge"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> متصل</div>
+                <button id="btn-open-store" class="btn btn-secondary text-xs px-3" type="button">🏦 بانک فرمول</button>
             </div>
         </header>
 
-        <!-- Tabs -->
         <nav class="nav-tabs">
-            <button class="tab-btn active" id="btn-formulas" type="button">📋 محصولات</button>
-            <button class="tab-btn" id="btn-materials" type="button">📦 انبار مواد</button>
-            <button class="tab-btn" id="btn-categories" type="button">📂 دسته‌ها</button>
+            <button class="tab-btn active" id="btn-tab-formulas" type="button">📋 محصولات</button>
+            <button class="tab-btn" id="btn-tab-materials" type="button">📦 انبار مواد</button>
+            <button class="tab-btn" id="btn-tab-categories" type="button">📂 دسته‌ها</button>
         </nav>
 
         <!-- TAB 1: FORMULAS -->
@@ -60,20 +46,16 @@
                 <div class="w-full lg:w-1/3 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-[300px] lg:h-full shrink-0">
                     <div class="p-3 border-b border-slate-100 flex gap-2 bg-slate-50 items-center sticky top-0 z-10">
                         <input type="text" id="search-formulas" placeholder="جستجو..." class="input-field text-xs h-10">
-                        <button id="btn-new-formula" class="bg-teal-600 text-white w-10 h-10 rounded-xl font-bold shadow text-xl hover:bg-teal-700" type="button">+</button>
+                        <button id="btn-open-new-formula" class="bg-teal-600 text-white w-10 h-10 rounded-xl font-bold shadow text-xl hover:bg-teal-700" type="button">+</button>
                     </div>
-                    <div id="formula-master-list" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-                        <p class="text-center text-xs text-slate-400 mt-10">لیست خالی است</p>
-                    </div>
+                    <div id="formula-master-list" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar"></div>
                 </div>
-
                 <!-- Detail -->
                 <div class="w-full lg:w-2/3 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col relative min-h-[500px]" id="detail-panel">
                     <div id="formula-detail-empty" class="absolute inset-0 flex flex-col items-center justify-center text-slate-300 bg-white z-10 p-4 text-center">
                         <span class="text-5xl mb-4 opacity-20">🏗️</span>
                         <p class="text-sm font-bold text-slate-400">محصولی انتخاب نشده است</p>
                     </div>
-
                     <div id="formula-detail-view" class="hidden flex-col h-full">
                         <div class="p-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                             <h2 id="active-formula-name" class="text-base font-bold text-slate-800 cursor-pointer truncate hover:text-teal-600">---</h2>
@@ -82,8 +64,6 @@
                                 <button id="btn-delete-formula" class="btn btn-white border border-rose-200 text-rose-500 py-1.5 px-3 text-xs shadow-none" type="button">🗑</button>
                             </div>
                         </div>
-
-                        <!-- Add Comp Form -->
                         <div class="p-3 border-b border-slate-100 bg-white shadow-sm z-20">
                             <form id="form-add-comp" class="flex flex-col md:flex-row gap-2 items-center">
                                 <div class="flex gap-2 w-full md:w-auto flex-grow">
@@ -96,11 +76,9 @@
                                 </div>
                             </form>
                         </div>
-
                         <div class="flex-1 overflow-y-auto bg-slate-50/30 relative">
                             <div id="formula-comps-list" class="divide-y divide-slate-100 pb-20"></div>
                         </div>
-
                         <div class="p-4 bg-slate-800 text-slate-200 border-t border-slate-700 shadow-inner z-20 rounded-b-2xl md:rounded-none">
                             <div class="grid grid-cols-3 gap-2 mb-3">
                                 <div><label class="text-[10px] text-slate-400 block mb-1 text-center">دستمزد</label><input id="inp-labor" class="w-full bg-slate-700 border border-slate-600 rounded p-2 text-center text-white text-sm"></div>
@@ -144,9 +122,7 @@
                             <input type="text" id="search-materials" placeholder="جستجو..." class="input-field pl-4 h-10 text-xs">
                             <select id="sort-materials" class="input-field w-auto text-xs h-10"><option value="name_asc">الفبا</option><option value="date_desc">جدیدترین</option></select>
                         </div>
-                        <div id="materials-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <p class="col-span-full text-center text-slate-400 py-4">لیست خالی است</p>
-                        </div>
+                        <div id="materials-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
                     </div>
                 </div>
             </div>
@@ -166,14 +142,12 @@
 
         <!-- TAB 4: STORE -->
         <div id="tab-store" class="hidden">
-            <div id="store-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <p class="col-span-full text-center text-slate-400 py-10">در حال دریافت...</p>
-            </div>
+            <div id="store-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
         </div>
     </div>
 
-    <!-- MODALS (Hidden by default via style="display:none") -->
-    <div id="new-formula-modal" class="modal-overlay" style="display: none;">
+    <!-- MODALS -->
+    <div id="new-formula-modal" class="modal-overlay hidden">
         <div class="modal-content max-w-sm p-6">
             <h3 class="font-bold text-slate-800 mb-4">محصول جدید</h3>
             <input type="text" id="new-formula-name" class="input-field mb-6 text-center font-bold" placeholder="نام محصول...">
@@ -184,7 +158,7 @@
         </div>
     </div>
 
-    <div id="print-modal" class="modal-overlay" style="display: none;">
+    <div id="print-modal" class="modal-overlay hidden">
         <div class="modal-content max-w-3xl">
             <div class="p-6 md:p-10 bg-white text-slate-900 max-h-[80vh] overflow-y-auto" id="print-area">
                 <div class="flex justify-between border-b-2 border-slate-800 pb-4 mb-6">
@@ -215,7 +189,7 @@
         </div>
     </div>
 
-    <!-- 5. اتصال به JS -->
-    <script src="script.js"></script>
+    <!-- جاوااسکریپت ماژولار -->
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>
