@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>سامانه مدیریت تولید سیمرغ (نسخه ۲.۱)</title>
+    <title>سامانه مدیریت تولید سیمرغ (نسخه ۲.۲)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.0"></script>
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
@@ -180,10 +180,10 @@
                     <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 min-h-[500px]">
                         <div class="flex flex-col sm:flex-row gap-2 mb-4">
                             <input type="text" id="search-materials" placeholder="جستجو..." class="input-field pl-4 h-10 text-xs flex-grow">
-                            <!-- SORT OPTIONS RESTORED -->
+                            <!-- SORT OPTIONS RESTORED AND ADDED CATEGORY -->
                             <select id="sort-materials" class="input-field w-full sm:w-auto text-xs h-10">
                                 <option value="update_desc">بروزرسانی (جدیدترین)</option>
-                                <option value="update_asc">بروزرسانی (قدیمی‌ترین)</option>
+                                <option value="category">دسته‌بندی</option> <!-- اضافه شده -->
                                 <option value="price_desc">قیمت (گران‌ترین)</option>
                                 <option value="price_asc">قیمت (ارزان‌ترین)</option>
                                 <option value="name_asc">حروف الفبا</option>
