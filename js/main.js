@@ -7,36 +7,39 @@ import * as Categories from './categories.js';
 import * as Store from './store.js';
 import * as Print from './print.js';
 
+// تابع رفرش کلی
 async function refreshApp() {
+    console.log("🔄 Refreshing App Data...");
     await fetchAllData();
     updateUI();
 }
 
 function updateUI() {
-    // رندر لیست‌ها
     Formulas.renderFormulaList();
     Materials.renderMaterials();
     Categories.renderCategories(refreshApp);
     Store.renderStore(refreshApp);
     
-    // پر کردن فیلترها (مهم)
-    Formulas.updateDropdowns();
-    Formulas.updateCompSelect();
-
-    // اگر فرمولی باز است، رفرش کن
+    // اگر فرمولی باز است، دوباره آن را پیدا و رندر کن
     if (state.activeFormulaId) {
         const f = state.formulas.find(x => x.$id === state.activeFormulaId);
-        if (f) Formulas.renderFormulaDetail(f);
-        else {
+        if (f) {
+            // پاس دادن refreshApp بسیار مهم است برای دکمه‌ها
+            Formulas.renderFormulaDetail(f, refreshApp);
+        } else {
+            // فرمول حذف شده
             state.activeFormulaId = null;
             document.getElementById('formula-detail-view').classList.add('hidden');
             document.getElementById('formula-detail-empty').classList.remove('hidden');
         }
     }
+    
+    Formulas.updateDropdowns();
+    Formulas.updateCompSelect();
 
-    // فیلتر دسته در تب مواد
+    // فیلتر انبار
     const matCat = document.getElementById('mat-category');
-    if(matCat && state.categories.length > 0) {
+    if(matCat) {
         const val = matCat.value;
         const c = state.categories.map(x => `<option value="${x.$id}">${x.name}</option>`).join('');
         matCat.innerHTML = '<option value="">بدون دسته</option>' + c;
@@ -57,6 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('btn-tab-categories').onclick = () => switchTab('categories');
         document.getElementById('btn-open-store').onclick = () => switchTab('store');
         
+        // *** انتقال تابع رفرش به ماژول‌ها ***
         Formulas.setupFormulas(refreshApp);
         Materials.setupMaterials(refreshApp);
         Categories.setupCategories(refreshApp);
