@@ -75,19 +75,20 @@ export function renderFormulaDetail(f, refreshCallback) {
                     // --- محاسبه هوشمند قیمت ---
                     try {
                         const rels = JSON.parse(m.unit_relations || '{}');
-                        const priceUnit = rels.price_unit || m.purchase_unit; // واحدی که قیمت برای آن است
+                        const priceUnit = rels.price_unit || m.purchase_unit; 
                         
-                        // 1. تبدیل قیمت به "واحد پایه"
                         const priceFactor = getUnitFactor(m, priceUnit);
-                        const basePrice = m.price / priceFactor; // قیمت هر 1 واحد پایه
+                        let basePrice = m.price / priceFactor; 
                         
-                        // 2. تبدیل "واحد انتخابی" به "واحد پایه"
+                        // اعمال مالیات اگر فعال باشد
+                        if(m.tax_enabled) {
+                            basePrice = basePrice * 1.10;
+                        }
+                        
                         const selectedUnitFactor = getUnitFactor(m, unitName);
-                        
-                        // 3. قیمت نهایی واحد انتخابی
                         price = basePrice * selectedUnitFactor;
                         
-                    } catch(e) { price = m.price; } // fallback
+                    } catch(e) { price = m.price; }
                 } else { name = '(حذف شده)'; }
             } else {
                 const sub = state.formulas.find(x => x.$id === c.id);
@@ -126,7 +127,7 @@ function getUnitFactor(material, unitName) {
         const rels = JSON.parse(material.unit_relations || '{}');
         if (unitName === rels.base) return 1;
         const found = (rels.others || []).find(u => u.name === unitName);
-        if (found) return found.qtyBase / found.qtyUnit; // ضریب تبدیل به پایه
+        if (found && found.qtyUnit !== 0) return found.qtyBase / found.qtyUnit; 
         return 1;
     } catch (e) { return 1; }
 }
@@ -146,9 +147,14 @@ export function calculateCost(f) {
                 const selectedFactor = getUnitFactor(m, c.unit);
                 
                 if(priceFactor !== 0) {
-                    // (Price / PriceFactor) = BasePrice
-                    // BasePrice * SelectedFactor = UnitPrice
-                    matCost += (m.price / priceFactor) * selectedFactor * c.qty;
+                    let basePrice = m.price / priceFactor;
+                    
+                    // اعمال مالیات (Logic 2: محاسبه در زمان استفاده)
+                    if(m.tax_enabled) {
+                        basePrice = basePrice * 1.10; 
+                    }
+                    
+                    matCost += basePrice * selectedFactor * c.qty;
                 }
             }
         } else {
