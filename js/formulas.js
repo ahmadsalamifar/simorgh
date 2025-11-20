@@ -66,29 +66,31 @@ export function renderFormulaDetail(f, refreshCallback) {
     } else {
         listEl.innerHTML = comps.map((c, idx) => {
             let name = '?', unitName = '-', price = 0, total = 0;
+            let taxBadge = '';
+
             if(c.type === 'mat') {
                 const m = state.materials.find(x => x.$id === c.id);
                 if(m) { 
                     name = m.display_name || m.name;
                     unitName = c.unit || 'واحد';
                     
-                    // --- محاسبه هوشمند قیمت ---
+                    // اعمال مالیات در صورت وجود
+                    let baseMatPrice = m.price;
+                    if(m.has_tax) {
+                        baseMatPrice = baseMatPrice * 1.10; // +10%
+                        taxBadge = '<span class="text-[9px] text-rose-500 bg-rose-50 px-1 rounded ml-1">+مالیات</span>';
+                    }
+
                     try {
                         const rels = JSON.parse(m.unit_relations || '{}');
-                        const priceUnit = rels.price_unit || m.purchase_unit; 
+                        const priceUnit = rels.price_unit || m.purchase_unit;
                         
                         const priceFactor = getUnitFactor(m, priceUnit);
-                        let basePrice = m.price / priceFactor; 
-                        
-                        // اعمال مالیات اگر فعال باشد
-                        if(m.tax_enabled) {
-                            basePrice = basePrice * 1.10;
-                        }
-                        
+                        const basePrice = baseMatPrice / priceFactor;
                         const selectedUnitFactor = getUnitFactor(m, unitName);
-                        price = basePrice * selectedUnitFactor;
                         
-                    } catch(e) { price = m.price; }
+                        price = basePrice * selectedUnitFactor;
+                    } catch(e) { price = baseMatPrice; }
                 } else { name = '(حذف شده)'; }
             } else {
                 const sub = state.formulas.find(x => x.$id === c.id);
@@ -99,16 +101,16 @@ export function renderFormulaDetail(f, refreshCallback) {
             return `
             <div class="flex justify-between items-center p-3 text-sm hover:bg-slate-50 group border-b border-slate-50">
                 <div class="flex-grow">
-                    <div class="font-bold text-slate-700 text-xs flex items-center gap-2">${name}</div>
+                    <div class="font-bold text-slate-700 text-xs flex items-center gap-2">${name} ${taxBadge}</div>
                     <div class="text-[10px] text-slate-500 mt-1">
                         <span class="font-mono font-bold bg-slate-200 px-1.5 rounded text-slate-700">${c.qty}</span>
                         <span class="mx-1 text-teal-700">${unitName}</span>
                         <span class="opacity-40 mx-1">×</span>
-                        <span class="opacity-70">${formatPrice(price.toFixed(0))}</span>
+                        <span class="opacity-70">${formatPrice(price)}</span>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <div class="text-right"><div class="font-mono font-bold text-slate-700 text-xs">${formatPrice(total.toFixed(0))}</div></div>
+                    <div class="text-right"><div class="font-mono font-bold text-slate-700 text-xs">${formatPrice(total)}</div></div>
                     <button class="text-rose-400 opacity-0 group-hover:opacity-100 px-2 btn-del-comp transition-opacity" data-idx="${idx}">×</button>
                 </div>
             </div>`;
@@ -118,7 +120,7 @@ export function renderFormulaDetail(f, refreshCallback) {
         });
     }
     const calc = calculateCost(f);
-    document.getElementById('lbl-final-price').innerText = formatPrice(calc.final.toFixed(0));
+    document.getElementById('lbl-final-price').innerText = formatPrice(calc.final);
 }
 
 function getUnitFactor(material, unitName) {
@@ -127,7 +129,7 @@ function getUnitFactor(material, unitName) {
         const rels = JSON.parse(material.unit_relations || '{}');
         if (unitName === rels.base) return 1;
         const found = (rels.others || []).find(u => u.name === unitName);
-        if (found && found.qtyUnit !== 0) return found.qtyBase / found.qtyUnit; 
+        if (found) return found.qtyBase / found.qtyUnit;
         return 1;
     } catch (e) { return 1; }
 }
@@ -140,6 +142,10 @@ export function calculateCost(f) {
         if(c.type==='mat') {
             const m = state.materials.find(x => x.$id === c.id);
             if(m) {
+                // اعمال مالیات قبل از محاسبه
+                let currentPrice = m.price;
+                if(m.has_tax) currentPrice *= 1.10;
+
                 const rels = JSON.parse(m.unit_relations || '{}');
                 const priceUnit = rels.price_unit || m.purchase_unit;
                 
@@ -147,14 +153,7 @@ export function calculateCost(f) {
                 const selectedFactor = getUnitFactor(m, c.unit);
                 
                 if(priceFactor !== 0) {
-                    let basePrice = m.price / priceFactor;
-                    
-                    // اعمال مالیات (Logic 2: محاسبه در زمان استفاده)
-                    if(m.tax_enabled) {
-                        basePrice = basePrice * 1.10; 
-                    }
-                    
-                    matCost += basePrice * selectedFactor * c.qty;
+                    matCost += (currentPrice / priceFactor) * selectedFactor * c.qty;
                 }
             }
         } else {
