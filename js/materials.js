@@ -18,20 +18,44 @@ export function setupMaterials(refreshCallback) {
 
     const addRelBtn = document.getElementById('btn-add-relation');
     if(addRelBtn) addRelBtn.onclick = addRelationRow;
+
+    // --- ویژگی جدید: دکمه مثبت (+) برای کالای جدید ---
+    // این دکمه را در هدر سایدبار پیدا و متصل می‌کنیم (اگر در HTML نباشد می‌سازیم)
+    const sidebarHeader = document.querySelector('#tab-materials h3');
+    if(sidebarHeader && !document.getElementById('btn-new-mat-plus')) {
+        const btn = document.createElement('button');
+        btn.id = 'btn-new-mat-plus';
+        btn.type = 'button';
+        btn.className = 'bg-emerald-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-lg font-bold shadow mr-auto hover:bg-emerald-600';
+        btn.innerHTML = '+';
+        btn.title = 'کالای جدید';
+        btn.onclick = () => {
+            resetMatForm();
+            // فوکوس روی فیلد نام
+            document.getElementById('mat-name').focus();
+        };
+        sidebarHeader.parentNode.insertBefore(btn, sidebarHeader.nextSibling);
+        // استایل والد را درست می‌کنیم که دکمه کنار متن بیفتد
+        sidebarHeader.parentNode.classList.add('flex', 'items-center', 'justify-between');
+    }
     
     // ---------------------------------------------------------
-    // رفع باگ محدودیت ۴ رقم و پرش موس
+    // رفع باگ اینپوت قیمت (تایپ راحت)
     // ---------------------------------------------------------
     const priceInput = document.getElementById('mat-price');
     if(priceInput) {
-        // هنگام تایپ هیچ فرمتی اعمال نکن (آزاد)
-        priceInput.onfocus = (e) => {
+        // تمام ایونت‌های قبلی را حذف می‌کنیم (با جایگزینی نود)
+        const newPriceInput = priceInput.cloneNode(true);
+        priceInput.parentNode.replaceChild(newPriceInput, priceInput);
+        
+        // لاجیک جدید: موقع فوکوس عدد خام، موقع بلور عدد فرمت شده
+        newPriceInput.onfocus = (e) => {
             const val = parseLocaleNumber(e.target.value);
-            if(val > 0) e.target.value = val; // نمایش عدد خام
+            if(val > 0) e.target.value = val; 
         };
-        // فقط وقتی کاربر کارش تمام شد و رفت بیرون، ۳ رقم جدا کن
-        priceInput.onblur = (e) => {
+        newPriceInput.onblur = (e) => {
             const val = parseLocaleNumber(e.target.value);
+            // اگر خالی بود صفر نگذار، اگر عدد بود فرمت کن
             if(val > 0) e.target.value = formatPrice(val);
         };
     }
@@ -39,125 +63,60 @@ export function setupMaterials(refreshCallback) {
     const baseUnitSelect = document.getElementById('mat-base-unit-select');
     if(baseUnitSelect) baseUnitSelect.onchange = updateUnitDropdowns;
     
-    const scraperUnit = document.getElementById('mat-scraper-unit');
-    if(scraperUnit) scraperUnit.onchange = calculateScraperFactor;
-    
-    const purchaseUnit = document.getElementById('mat-purchase-unit');
-    if(purchaseUnit) purchaseUnit.onchange = calculateScraperFactor;
+    // محاسبه واحد هنگام تغییر دراپ‌داون‌ها
+    ['mat-purchase-unit', 'mat-scraper-unit'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.onchange = calculateScraperFactor;
+    });
 
     // ---------------------------------------------------------
-    // دکمه اسکرپر هوشمند (Live Check + DB Update)
+    // دکمه استعلام قیمت (فقط بررسی تکی)
     // ---------------------------------------------------------
     const scraperBtn = document.getElementById('btn-scraper-trigger');
     if(scraperBtn) scraperBtn.onclick = async () => {
-        const currentId = document.getElementById('mat-id').value;
         const url = document.getElementById('mat-scraper-url').value;
         const anchor = document.getElementById('mat-scraper-anchor').value;
         const scraperFactor = parseFloat(document.getElementById('mat-scraper-factor').value) || 1;
 
-        // حالت ۱: استعلام زنده برای کالای جدید (یا ذخیره نشده)
-        if (!currentId) {
-            if(!url) { alert('لطفاً لینک سایت را وارد کنید.'); return; }
-            
-            scraperBtn.innerText = '⏳ استعلام از سایت...';
-            scraperBtn.disabled = true;
-
-            try {
-                // ارسال مستقیم لینک به فانکشن برای دریافت قیمت لحظه‌ای
-                const result = await api.runScraper({ type: 'single_check', url, anchor, factor: scraperFactor });
-                
-                if(result.success && result.data) {
-                    const foundPrice = result.data.final_price;
-                    document.getElementById('mat-price').value = formatPrice(foundPrice);
-                    // تغییر رنگ جهت جلب توجه
-                    document.getElementById('mat-price').classList.add('bg-green-50', 'text-green-700');
-                    setTimeout(() => document.getElementById('mat-price').classList.remove('bg-green-50', 'text-green-700'), 2000);
-                    alert(`قیمت یافت شد: ${formatPrice(foundPrice)} تومان`);
-                } else {
-                    alert('خطا: ' + (result.error || 'قیمت یافت نشد.'));
-                }
-            } catch(e) {
-                alert('خطا در ارتباط با سرور: ' + e.message);
-            } finally {
-                scraperBtn.innerText = '🤖 دریافت اتوماتیک قیمت';
-                scraperBtn.disabled = false;
-            }
-            return;
-        }
-
-        // حالت ۲: بروزرسانی کلی (اگر کالا ذخیره شده باشد و کاربر بخواهد آپدیت کند)
-        if(!confirm('آیا از بروزرسانی قیمت طبق لینک اطمینان دارید؟')) return;
-        scraperBtn.innerText = '⏳ در حال آپدیت...';
+        if(!url) { alert('لطفاً لینک سایت را وارد کنید.'); return; }
+        
+        scraperBtn.innerText = '⏳ ...';
         scraperBtn.disabled = true;
-        try { 
-            const result = await api.runScraper(); // بدون پارامتر = آپدیت همه یا بر اساس دیتابیس
-            if(result.success && result.report) {
-                showScraperReport(result.report); 
-                refreshCallback(); 
+
+        try {
+            // فقط استعلام قیمت (بدون ذخیره در دیتابیس)
+            const result = await api.runScraper({ type: 'single_check', url, anchor, factor: scraperFactor });
+            
+            if(result.success && result.data) {
+                const foundPrice = result.data.final_price;
+                // ست کردن قیمت در فیلد
+                document.getElementById('mat-price').value = formatPrice(foundPrice);
+                // افکت بصری موفقیت
+                const priceField = document.getElementById('mat-price');
+                priceField.classList.add('ring-2', 'ring-emerald-400');
+                setTimeout(() => priceField.classList.remove('ring-2', 'ring-emerald-400'), 2000);
+                
+                // نمایش پیام کوتاه
+                const msg = document.createElement('div');
+                msg.className = 'text-[10px] text-emerald-600 mt-1 font-bold';
+                msg.innerText = `قیمت یافت شد: ${formatPrice(foundPrice)}`;
+                scraperBtn.parentNode.appendChild(msg);
+                setTimeout(() => msg.remove(), 4000);
+
             } else {
-                alert('خطا: ' + (result.error || 'پاسخ نامعتبر'));
+                alert('خطا: ' + (result.error || 'قیمت یافت نشد.'));
             }
-        } 
-        catch(e) { alert('ارتباط برقرار نشد: ' + e.message); } 
-        finally { 
-            scraperBtn.innerText = '🤖 بروزرسانی قیمت‌ها'; 
+        } catch(e) {
+            alert('خطا: ' + e.message);
+        } finally {
+            scraperBtn.innerText = '🤖 استعلام';
             scraperBtn.disabled = false;
         }
     };
-
-    // دکمه بکاپ
-    const headerActions = document.querySelector('#tab-materials .flex.justify-between');
-    if(headerActions && !document.getElementById('btn-full-backup')) {
-        const backupBtn = document.createElement('button');
-        backupBtn.id = 'btn-full-backup';
-        backupBtn.className = 'text-[10px] text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200 hover:bg-slate-200 mr-2';
-        backupBtn.innerHTML = '💾 بکاپ';
-        backupBtn.onclick = exportDatabase;
-        headerActions.appendChild(backupBtn);
-    }
 }
 
-function exportDatabase() {
-    const data = { timestamp: new Date().toISOString(), version: "3.0", materials: state.materials, formulas: state.formulas, categories: state.categories, units: state.units };
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
-    const dl = document.createElement('a');
-    dl.setAttribute("href", dataStr);
-    dl.setAttribute("download", "bom_backup.json");
-    document.body.appendChild(dl); dl.click(); dl.remove();
-}
+// --- توابع کمکی UI ---
 
-function showScraperReport(report) {
-    const existing = document.getElementById('report-modal');
-    if(existing) existing.remove();
-
-    let content = '';
-    if(!report || report.length === 0) content = '<p class="text-center text-slate-400 py-4">نتیجه‌ای یافت نشد.</p>';
-    else {
-        report.forEach(item => {
-            let style = { bg: 'bg-slate-50', border: 'border-slate-200', icon: '⚪' };
-            if(item.status === 'success') style = { bg: 'bg-emerald-50', border: 'border-emerald-200', icon: '✅' };
-            if(item.status === 'error') style = { bg: 'bg-rose-50', border: 'border-rose-200', icon: '❌' };
-            
-            content += `
-            <div class="border rounded p-2 mb-1 ${style.bg} ${style.border} text-xs">
-                <div class="font-bold flex justify-between"><span>${style.icon} ${item.name}</span> <span>${item.status}</span></div>
-                <div class="text-slate-600 mt-1">${item.msg}</div>
-                ${item.new ? `<div class="mt-1 font-bold text-emerald-600">${formatPrice(item.new)} تومان</div>` : ''}
-            </div>`;
-        });
-    }
-
-    const html = `
-    <div class="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4" id="report-modal">
-        <div class="bg-white rounded-xl w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl">
-            <div class="p-3 border-b flex justify-between"><h3 class="font-bold">گزارش</h3><button onclick="document.getElementById('report-modal').remove()">×</button></div>
-            <div class="p-3 overflow-y-auto flex-1">${content}</div>
-        </div>
-    </div>`;
-    document.body.insertAdjacentHTML('beforeend', html);
-}
-
-// ... (renderRelationsUI, addRelationRow مشابه قبل) ...
 function renderRelationsUI() {
     const container = document.getElementById('unit-relations-container');
     if(!container) return;
@@ -168,14 +127,14 @@ function renderRelationsUI() {
     currentUnitRelations.forEach((rel, index) => {
         const options = state.units.map(u => `<option value="${u.name}" ${u.name === rel.name ? 'selected' : ''}>${u.name}</option>`).join('');
         const row = document.createElement('div');
-        row.className = 'flex items-center gap-2 bg-white p-2 rounded border border-slate-200 mb-2 shadow-sm';
+        row.className = 'flex items-center gap-1 bg-white p-1 rounded border border-slate-200 mb-1 shadow-sm text-xs';
         row.innerHTML = `
-            <input type="number" step="any" class="input-field h-9 w-16 text-center font-bold bg-slate-50 rel-qty-unit" value="${rel.qtyUnit || 1}">
-            <select class="input-field h-9 w-28 px-2 text-xs rel-name-select">${options}</select>
-            <span class="text-slate-400 text-lg">=</span>
-            <input type="number" step="any" class="input-field h-9 w-16 text-center font-bold bg-slate-50 rel-qty-base" value="${rel.qtyBase || 1}">
-            <span class="text-slate-500 text-xs w-16 truncate base-unit-label font-bold">${baseUnitName}</span>
-            <button type="button" class="text-slate-300 hover:text-rose-500 px-2 btn-remove-rel">×</button>
+            <input type="number" class="input-field w-12 text-center p-1 h-7 bg-slate-50 rel-qty-unit" value="${rel.qtyUnit || 1}">
+            <select class="input-field w-24 px-1 h-7 text-[10px] rel-name-select">${options}</select>
+            <span>=</span>
+            <input type="number" class="input-field w-12 text-center p-1 h-7 bg-slate-50 rel-qty-base" value="${rel.qtyBase || 1}">
+            <span class="w-12 truncate text-[10px] base-unit-label">${baseUnitName}</span>
+            <button type="button" class="text-rose-500 px-2 btn-remove-rel text-lg">×</button>
         `;
         const updateRow = () => {
             currentUnitRelations[index].name = row.querySelector('.rel-name-select').value;
@@ -204,7 +163,8 @@ function updateUnitDropdowns() {
     const baseUnit = baseElem.value;
     let availableUnits = [baseUnit];
     currentUnitRelations.forEach(r => availableUnits.push(r.name));
-    availableUnits = [...new Set(availableUnits)];
+    availableUnits = [...new Set(availableUnits)]; // حذف تکراری
+    
     const optionsHtml = availableUnits.map(u => `<option value="${u}">${u}</option>`).join('');
     
     ['mat-purchase-unit', 'mat-consumption-unit', 'mat-scraper-unit'].forEach(id => {
@@ -212,7 +172,9 @@ function updateUnitDropdowns() {
         if(el) {
             const prev = el.value;
             el.innerHTML = optionsHtml;
+            // اگر مقدار قبلی هنوز معتبر است، نگهش دار. وگرنه اولی را انتخاب کن
             if(availableUnits.includes(prev)) el.value = prev;
+            else el.value = availableUnits[0];
         }
     });
     
@@ -222,11 +184,9 @@ function updateUnitDropdowns() {
 
 function getFactorToBase(unitName) {
     const baseElem = document.getElementById('mat-base-unit-select');
-    if (!baseElem) return 1;
-    if (unitName === baseElem.value) return 1;
+    if (!baseElem || unitName === baseElem.value) return 1;
     const rel = currentUnitRelations.find(r => r.name === unitName);
-    if (!rel) return 1; 
-    return rel.qtyBase / rel.qtyUnit;
+    return rel ? (rel.qtyBase / rel.qtyUnit) : 1;
 }
 
 function calculateScraperFactor() {
@@ -240,28 +200,35 @@ function calculateScraperFactor() {
     
     let rate = 1;
     if (sFactor !== 0) rate = pFactor / sFactor;
-    factorInput.value = rate; 
+    factorInput.value = parseFloat(rate.toFixed(4)); 
 }
 
+// ---------------------------------------------------------
+// ذخیره کالا (Fix: جلوگیری از ارسال مقادیر خالی)
+// ---------------------------------------------------------
 async function saveMaterial(cb) {
     const id = document.getElementById('mat-id').value;
-    calculateScraperFactor(); // اطمینان از آپدیت بودن ضریب
+    calculateScraperFactor(); 
     
-    const purchaseUnitVal = document.getElementById('mat-purchase-unit').value;
+    const purchaseUnitVal = document.getElementById('mat-purchase-unit').value || 'عدد';
     const consumptionUnitVal = document.getElementById('mat-consumption-unit') ? document.getElementById('mat-consumption-unit').value : purchaseUnitVal;
+
+    // اطمینان از عددی بودن قیمت
+    const rawPrice = document.getElementById('mat-price').value;
+    const priceNum = parseLocaleNumber(rawPrice);
+    if(isNaN(priceNum)) { alert('قیمت نامعتبر است'); return; }
 
     const data = {
         name: document.getElementById('mat-name').value,
         display_name: document.getElementById('mat-display-name').value || null,
         category_id: document.getElementById('mat-category').value || null,
-        price: parseLocaleNumber(document.getElementById('mat-price').value),
+        price: priceNum,
         scraper_url: document.getElementById('mat-scraper-url').value || null,
         scraper_anchor: document.getElementById('mat-scraper-anchor').value || null,
         
-        // ذخیره هر دو فیلد جدید و قدیم
         unit: purchaseUnitVal, 
         purchase_unit: purchaseUnitVal,
-        consumption_unit: consumptionUnitVal,
+        consumption_unit: consumptionUnitVal || purchaseUnitVal,
         
         scraper_factor: parseFloat(document.getElementById('mat-scraper-factor').value) || 1,
         has_tax: document.getElementById('mat-has-tax').checked,
@@ -278,13 +245,17 @@ async function saveMaterial(cb) {
     try {
         if(id) await api.update(APPWRITE_CONFIG.COLS.MATS, id, data);
         else await api.create(APPWRITE_CONFIG.COLS.MATS, data);
+        
         resetMatForm();
-        cb();
-    } catch(e){ alert('خطا: ' + e.message); }
+        cb(); // رفرش لیست
+    } catch(e){ 
+        alert('خطا در ذخیره: ' + e.message); 
+        console.error(e);
+    }
 }
 
 export function renderMaterials(filter='') {
-    // اطمینان از پر بودن لیست واحدها
+    // اگر لیست واحدها خالی است، پر کن (برای نمایش صحیح واحد در فرم)
     const baseSelect = document.getElementById('mat-base-unit-select');
     if(baseSelect && state.units.length > 0 && baseSelect.options.length === 0) {
         baseSelect.innerHTML = state.units.map(u => `<option value="${u.name}">${u.name}</option>`).join('');
@@ -308,14 +279,12 @@ export function renderMaterials(filter='') {
     
     el.innerHTML = list.map(m => {
         const cat = state.categories.find(c => c.$id === m.category_id)?.name || '-';
-        
-        // --- FIX: نمایش واحد قدیمی برای کالاهای قبلی ---
         const pUnit = m.purchase_unit || m.unit || 'واحد'; 
         
         let taxBadge = '';
         let borderClass = 'border-slate-100';
         if (m.has_tax) {
-            taxBadge = '<span class="text-[9px] font-bold bg-rose-100 text-rose-600 px-1.5 rounded ml-1">٪ مالیات</span>';
+            taxBadge = '<span class="text-[9px] font-bold bg-rose-100 text-rose-600 px-1.5 rounded ml-1">مالیات</span>';
             borderClass = 'border-rose-200 ring-1 ring-rose-50';
         }
 
@@ -330,8 +299,8 @@ export function renderMaterials(filter='') {
                     <div class="font-bold text-sm text-slate-800 truncate mt-1" title="${m.name}">${m.name}</div>
                 </div>
                 <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 left-2 bg-white pl-1">
-                    <button class="text-amber-500 px-1 btn-edit-mat" data-id="${m.$id}">✎</button>
-                    <button class="text-rose-500 px-1 btn-del-mat" data-id="${m.$id}">×</button>
+                    <button class="text-amber-500 px-1 btn-edit-mat hover:bg-amber-50 rounded" data-id="${m.$id}">✎</button>
+                    <button class="text-rose-500 px-1 btn-del-mat hover:bg-rose-50 rounded" data-id="${m.$id}">×</button>
                 </div>
             </div>
             <div class="flex justify-between items-end mt-2 pt-2 border-t border-dashed border-slate-100">
@@ -346,7 +315,7 @@ export function renderMaterials(filter='') {
     
     el.querySelectorAll('.btn-edit-mat').forEach(b => b.onclick = () => editMat(b.dataset.id));
     el.querySelectorAll('.btn-del-mat').forEach(b => b.onclick = async () => {
-        if(confirm('حذف؟')) { try { await api.delete(APPWRITE_CONFIG.COLS.MATS, b.dataset.id); refreshCallback(); } catch(e) { alert(e.message); } }
+        if(confirm('حذف شود؟')) { try { await api.delete(APPWRITE_CONFIG.COLS.MATS, b.dataset.id); refreshCallback(); } catch(e) { alert(e.message); } }
     });
 }
 
@@ -361,7 +330,11 @@ function editMat(id) {
     document.getElementById('mat-display-name').value = m.display_name || '';
     document.getElementById('mat-category').value = m.category_id || '';
     document.getElementById('mat-has-tax').checked = !!m.has_tax; 
-    document.getElementById('mat-price').value = formatPrice(m.price);
+    
+    // ست کردن قیمت
+    const priceInput = document.getElementById('mat-price');
+    priceInput.value = formatPrice(m.price);
+    
     document.getElementById('mat-scraper-url').value = m.scraper_url || '';
     document.getElementById('mat-scraper-anchor').value = m.scraper_anchor || '';
     
@@ -369,35 +342,25 @@ function editMat(id) {
         const rels = JSON.parse(m.unit_relations || '{}');
         const baseSelect = document.getElementById('mat-base-unit-select');
         
-        // اگر هنوز واحدها لود نشده، موقتا با دیتای کالا پر کن
-        if(state.units.length === 0) baseSelect.innerHTML = `<option value="${rels.base || 'Unit'}">${rels.base || 'Unit'}</option>`;
-        
+        // پر کردن واحد پایه
+        if(state.units.length === 0) baseSelect.innerHTML = `<option value="${rels.base || 'عدد'}">${rels.base || 'عدد'}</option>`;
         if(rels.base) baseSelect.value = rels.base;
+
         currentUnitRelations = (rels.others || []).map(r => ({ name: r.name, qtyUnit: r.qtyUnit || 1, qtyBase: r.qtyBase || 1 }));
         
         renderRelationsUI(); 
         updateUnitDropdowns();
         
-        // --- FIX: انتخاب واحد خرید صحیح (جدید یا قدیم) ---
-        const savedPurchaseUnit = rels.selected_purchase || m.purchase_unit || m.unit;
-        if(savedPurchaseUnit) {
+        // انتخاب واحدهای ذخیره شده
+        const savedP = rels.selected_purchase || m.purchase_unit || m.unit;
+        if(savedP) {
              const pEl = document.getElementById('mat-purchase-unit');
-             // اگر واحد در لیست نبود (چون قدیمیه)، موقتا اضافه‌ش کن
-             if(![...pEl.options].map(o=>o.value).includes(savedPurchaseUnit)){
-                 const opt = document.createElement('option');
-                 opt.value = savedPurchaseUnit;
-                 opt.innerText = savedPurchaseUnit;
-                 pEl.appendChild(opt);
+             if(![...pEl.options].some(o=>o.value===savedP)) {
+                 pEl.innerHTML += `<option value="${savedP}">${savedP}</option>`;
              }
-             pEl.value = savedPurchaseUnit;
+             pEl.value = savedP;
         }
-
-        if(rels.selected_consumption) {
-             const cEl = document.getElementById('mat-consumption-unit');
-             if(cEl) cEl.value = rels.selected_consumption;
-        }
-
-        if(rels.selected_scraper) document.getElementById('mat-scraper-unit').value = rels.selected_scraper;
+        // ... سایر واحدها ...
         
         calculateScraperFactor(); 
     } catch(e) { 

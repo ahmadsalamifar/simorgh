@@ -8,11 +8,47 @@ export function setupCategories(refreshCallback) {
         addItem(APPWRITE_CONFIG.COLS.CATS, 'cat-name', refreshCallback); 
     };
 
-    // مدیریت واحدها (جدید)
+    // مدیریت واحدها
     document.getElementById('unit-form').onsubmit = (e) => { 
         e.preventDefault(); 
         addItem(APPWRITE_CONFIG.COLS.UNITS, 'unit-name', refreshCallback); 
     };
+
+    // --- ویژگی جدید: دکمه بکاپ در مدیریت داده‌ها ---
+    const backupContainer = document.getElementById('backup-container');
+    // اگر کانتینر اختصاصی در HTML نداشتید، به هدر این بخش اضافه می‌کنیم
+    if(!document.getElementById('btn-full-backup')) {
+        // پیدا کردن جایی برای دکمه (مثلاً کنار فرم واحدها یا یک بخش جدید)
+        const target = document.getElementById('tab-categories');
+        if(target) {
+            const btn = document.createElement('button');
+            btn.id = 'btn-full-backup';
+            btn.className = 'btn btn-secondary w-full mt-6 border-slate-300 bg-white text-slate-600 shadow-sm';
+            btn.innerHTML = '💾 دانلود نسخه پشتیبان کامل (Full Backup)';
+            btn.onclick = exportDatabase;
+            target.appendChild(btn);
+        }
+    }
+}
+
+// تابع بکاپ‌گیری
+function exportDatabase() {
+    const data = {
+        timestamp: new Date().toISOString(),
+        version: "3.0",
+        materials: state.materials,
+        formulas: state.formulas,
+        categories: state.categories,
+        units: state.units
+    };
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "simorgh_backup_" + new Date().toISOString().split('T')[0] + ".json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
 }
 
 async function addItem(col, inputId, cb) {
