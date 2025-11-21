@@ -1,7 +1,10 @@
 import { db, functions, ID, Query, APPWRITE_CONFIG, state } from './config.js';
 
+/**
+ * دریافت تمام داده‌های اولیه از دیتابیس
+ */
 export async function fetchAllData() {
-    console.log("📡 API: دریافت داده‌های اولیه...");
+    // console.log("📡 API: Fetching data...");
     try {
         const [cRes, uRes, mRes, fRes] = await Promise.all([
             db.listDocuments(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.CATS, [Query.limit(100)]),
@@ -13,56 +16,62 @@ export async function fetchAllData() {
         state.categories = cRes.documents;
         state.units = uRes.documents;
         state.materials = mRes.documents;
+        // مرتب‌سازی فرمول‌ها بر اساس تاریخ بروزرسانی
         state.formulas = fRes.documents.sort((a, b) => new Date(b.$updatedAt) - new Date(a.$updatedAt));
         
-        try {
-            const sRes = await db.listDocuments(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.FORMS, [Query.equal('is_public', true), Query.limit(50)]);
-            state.publicFormulas = sRes.documents;
-        } catch(e) { console.warn("Store fetch failed", e); }
+        // دریافت فرمول‌های عمومی (فروشگاه) - جداگانه چون اهمیت کمتری دارد
+        fetchStoreData();
         
         return true;
     } catch (error) {
         console.error("🔥 API Fetch Error:", error);
-        throw error;
+        throw new Error("خطا در دریافت اطلاعات از سرور. لطفا اتصال اینترنت را بررسی کنید.");
     }
 }
 
-export async function fetchSingleFormula(id) {
+async function fetchStoreData() {
     try {
-        const doc = await db.getDocument(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.FORMS, id);
-        const idx = state.formulas.findIndex(f => f.$id === id);
-        if (idx !== -1) state.formulas[idx] = doc;
-        return doc;
-    } catch (e) { console.error(e); return null; }
+        const sRes = await db.listDocuments(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.FORMS, [
+            Query.equal('is_public', true), 
+            Query.limit(50)
+        ]);
+        state.publicFormulas = sRes.documents;
+    } catch(e) { 
+        console.warn("Store fetch warning:", e); 
+    }
 }
 
+/**
+ * آبجکت مرکزی متدهای API
+ */
 export const api = {
     create: (col, data) => db.createDocument(APPWRITE_CONFIG.DB_ID, col, ID.unique(), data),
     update: (col, id, data) => db.updateDocument(APPWRITE_CONFIG.DB_ID, col, id, data),
     delete: (col, id) => db.deleteDocument(APPWRITE_CONFIG.DB_ID, col, id),
     get: (col, id) => db.getDocument(APPWRITE_CONFIG.DB_ID, col, id),
     
-    // --- UPDATED SCRAPER CALL ---
+    // اجرای تابع اسکرپر در سمت سرور
     runScraper: async (payload = {}) => {
-        console.log("🚀 Executing Scraper Function with payload:", payload);
+        console.log("🚀 Running Scraper:", payload);
         try {
             const execution = await functions.createExecution(
                 APPWRITE_CONFIG.FUNCTIONS.SCRAPER, 
-                JSON.stringify(payload) // ارسال داده‌ها به عنوان JSON String
+                JSON.stringify(payload)
             );
             
             if (execution.status === 'completed') {
                 try {
                     return JSON.parse(execution.responseBody);
                 } catch (e) {
-                    return { success: false, error: "خطا در تحلیل پاسخ سرور: " + execution.responseBody };
+                    console.error("JSON Parse Error from Function:", execution.responseBody);
+                    return { success: false, error: "فرمت پاسخ سرور نامعتبر است" };
                 }
             } else {
-                return { success: false, error: "اجرای فانکشن ناموفق بود: " + execution.status };
+                return { success: false, error: "وضعیت خطا: " + execution.status };
             }
         } catch (error) {
-            console.error("Function Error:", error);
-            throw { message: "خطای ارتباط با سرور اسکرپر" };
+            console.error("Function Network Error:", error);
+            throw new Error("خطای ارتباط با سرور اسکرپر");
         }
     }
 };

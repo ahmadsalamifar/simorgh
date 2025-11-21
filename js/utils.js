@@ -1,34 +1,46 @@
-// توابع کمکی و ابزارها - نسخه اصلاح شده
+// توابع کمکی عمومی (بدون وابستگی به بیزینس لاجیک خاص)
 
-// فرمت کردن قیمت (اعداد فارسی، ۳ رقم ۳ رقم، بدون اعشار)
+/**
+ * تبدیل اعداد فارسی/عربی به انگلیسی و پارس کردن به Float
+ * @param {string|number} stringNumber 
+ * @returns {number}
+ */
+export function parseLocaleNumber(stringNumber) {
+    if (stringNumber === undefined || stringNumber === null || stringNumber === '') return 0;
+    if (typeof stringNumber === 'number') return stringNumber;
+    
+    let str = stringNumber.toString().trim();
+    
+    // تبدیل اعداد فارسی و عربی به انگلیسی
+    str = str.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+             .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+             
+    // حذف کاما (جداکننده هزارگان)
+    // توجه: اگر از نقطه برای اعشار استفاده می‌کنید، آن را نگه می‌داریم.
+    const clean = str.replace(/,/g, '');
+    
+    // استخراج عدد (شامل منفی و اعشار)
+    const match = clean.match(/-?\d+(\.\d+)?/);
+    
+    return match ? parseFloat(match[0]) : 0;
+}
+
+/**
+ * فرمت کردن قیمت به صورت ۳ رقم ۳ رقم با اعداد فارسی
+ * @param {number} n 
+ * @returns {string}
+ */
 export function formatPrice(n) {
     if (n === undefined || n === null || isNaN(n)) return '۰';
-    // نمایش به صورت فارسی و ۳ رقم ۳ رقم
+    // گرد کردن و نمایش به لوکال فارسی
     return Math.round(Number(n)).toLocaleString('fa-IR');
 }
 
-// تبدیل عدد (فارسی یا انگلیسی) به عدد جاوااسکریپت برای محاسبات
-export function parseLocaleNumber(stringNumber) {
-    if (!stringNumber) return 0;
-    if (typeof stringNumber === 'number') return stringNumber;
-    
-    // تبدیل اعداد فارسی به انگلیسی
-    const english = stringNumber.toString()
-        .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
-        .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)); // اعداد عربی
-        
-    // حذف کاما و کاراکترهای غیر عددی (به جز نقطه برای اعشار)
-    const clean = english.replace(/[^0-9.]/g, '');
-    return parseFloat(clean) || 0;
-}
-
-// فرمت کردن تاریخ شمسی
 export function formatDate(d) {
     if (!d) return '';
     return new Date(d).toLocaleDateString('fa-IR');
 }
 
-// بج (Badge) تاریخ بروزرسانی
 export function getDateBadge(dateString) {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -47,25 +59,30 @@ export function getDateBadge(dateString) {
     return `<span class="text-[10px] px-1.5 py-0.5 rounded border ${colorClass} whitespace-nowrap">${text}</span>`;
 }
 
-// تغییر تب‌ها
+// مدیریت تب‌ها
 export function switchTab(id) {
-    ['formulas', 'materials', 'categories', 'store'].forEach(t => {
+    const tabs = ['formulas', 'materials', 'categories', 'store'];
+    
+    tabs.forEach(t => {
         const el = document.getElementById('tab-' + t);
         const btn = document.getElementById('btn-tab-' + t);
         if (el) el.classList.add('hidden');
         if (btn) btn.classList.remove('active');
     });
+
     const target = document.getElementById('tab-' + id);
     const targetBtn = document.getElementById('btn-tab-' + id);
+    
     if (target) target.classList.remove('hidden');
     if (targetBtn) targetBtn.classList.add('active');
 }
 
+// مدیریت مدال‌ها
 export function openModal(id) {
     const el = document.getElementById(id);
     if (el) {
         el.classList.remove('hidden');
-        el.style.display = 'flex';
+        el.style.display = 'flex'; // اطمینان از سنتر شدن فلکس
     }
 }
 
@@ -75,4 +92,14 @@ export function closeModal(id) {
         el.classList.add('hidden');
         el.style.display = 'none';
     }
+}
+
+// تابع تاخیر انداز (Debounce) برای جستجو
+export function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), wait);
+    };
 }
