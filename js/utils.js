@@ -11,6 +11,7 @@ export function parseLocaleNumber(stringNumber) {
     str = str.replace(/,/g, '');
 
     // ۳. مدیریت نقطه (اگر کاربر از نقطه به عنوان جداکننده هزارگان استفاده کرده باشد)
+    // اگر بیش از یک نقطه وجود دارد (مثلاً 4.500.000)، یعنی جداکننده است -> حذف همه نقاط
     const dotCount = (str.match(/\./g) || []).length;
     if (dotCount > 1) {
         str = str.replace(/\./g, '');
@@ -55,39 +56,5 @@ export function closeModal(id) {
     if(el) {
         el.classList.add('hidden');
         el.classList.remove('flex');
-    }
-}
-
-// سوییچ تب‌ها (برای منوی اصلی)
-export function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    
-    document.querySelectorAll('.sidebar-item').forEach(el => {
-        el.classList.remove('bg-emerald-50', 'text-emerald-600', 'border-r-4', 'border-emerald-500');
-        el.classList.add('text-slate-600');
-    });
-
-    const target = document.getElementById(tabId);
-    if(target) target.classList.remove('hidden');
-
-    const btns = document.querySelectorAll('.sidebar-item');
-    btns.forEach(btn => {
-        if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabId)) {
-            btn.classList.remove('text-slate-600');
-            btn.classList.add('bg-emerald-50', 'text-emerald-600', 'border-r-4', 'border-emerald-500');
-        }
-    });
-    
-    if(window.innerWidth < 768) window.scrollTo({top: 0, behavior: 'smooth'});
-}
-
-// *** تابع بازگردانده شده برای جلوگیری از خطای main.js ***
-export function formatInput(e) {
-    // این تابع فقط برای سازگاری با کدهای قدیمی main.js نگه داشته شده است.
-    // اگر رویداد "تایپ کردن" (input) باشد، کاری نمی‌کنیم تا موس نپرد.
-    // اگر رویداد "خروج" (blur) باشد، فرمت می‌کنیم.
-    if (e && e.target && e.type === 'blur') {
-        const val = parseLocaleNumber(e.target.value);
-        if (val > 0) e.target.value = formatPrice(val);
     }
 }
