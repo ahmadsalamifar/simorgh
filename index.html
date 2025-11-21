@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>سامانه مدیریت تولید سیمرغ (نسخه ۲.۵)</title>
+    <title>سامانه مدیریت تولید سیمرغ (نسخه ۳.۰)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.0"></script>
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
@@ -18,30 +18,32 @@
 
     <div id="app-content" class="hidden">
         <header class="app-header">
-            <div><h1 class="text-xl md:text-2xl font-black text-slate-800">سامانه <span class="text-teal-600">سیمرغ</span></h1></div>
+            <div><h1 class="text-lg md:text-2xl font-black text-slate-800">سامانه <span class="text-teal-600">سیمرغ</span></h1></div>
             <div class="flex items-center gap-2">
-                <div class="status-badge"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> آنلاین</div>
-                <button id="btn-open-store" class="btn btn-secondary text-xs px-3" type="button">🏦 بانک فرمول</button>
+                <div class="status-badge hidden sm:flex"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> آنلاین</div>
+                <button id="btn-open-store" class="btn btn-secondary text-[10px] px-2 md:text-xs md:px-3" type="button">🏦 بانک فرمول</button>
             </div>
         </header>
 
         <nav class="nav-tabs">
-            <button class="tab-btn active" id="btn-tab-formulas" type="button">📋 محصولات (فرمول)</button>
-            <button class="tab-btn" id="btn-tab-materials" type="button">📦 انبار و قیمت‌ها</button>
-            <button class="tab-btn" id="btn-tab-categories" type="button">📂 مدیریت داده‌ها</button>
+            <button class="tab-btn active" id="btn-tab-formulas" type="button">📋 محصولات</button>
+            <button class="tab-btn" id="btn-tab-materials" type="button">📦 انبار</button>
+            <button class="tab-btn" id="btn-tab-categories" type="button">📂 تنظیمات</button>
         </nav>
 
         <!-- TAB 1: FORMULAS -->
         <div id="tab-formulas">
             <div class="flex flex-col lg:flex-row gap-4 h-auto lg:h-[calc(100vh-220px)] min-h-[600px]">
+                <!-- لیست سمت راست -->
                 <div class="w-full lg:w-1/3 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-[300px] lg:h-full shrink-0">
                     <div class="p-3 border-b border-slate-100 flex gap-2 bg-slate-50 items-center sticky top-0 z-10">
                         <input type="text" id="search-formulas" placeholder="جستجو..." class="input-field text-xs h-10">
-                        <button id="btn-open-new-formula" class="bg-teal-600 text-white w-10 h-10 rounded-xl font-bold shadow text-xl hover:bg-teal-700" type="button">+</button>
+                        <button id="btn-open-new-formula" class="bg-teal-600 text-white w-10 h-10 rounded-xl font-bold shadow text-xl hover:bg-teal-700 shrink-0" type="button">+</button>
                     </div>
                     <div id="formula-master-list" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar"></div>
                 </div>
                 
+                <!-- پنل جزئیات -->
                 <div class="w-full lg:w-2/3 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col relative min-h-[500px]" id="detail-panel">
                     <div id="formula-detail-empty" class="absolute inset-0 flex flex-col items-center justify-center text-slate-300 bg-white z-10 p-4 text-center">
                         <span class="text-5xl mb-4 opacity-20">🏗️</span>
@@ -50,39 +52,38 @@
                     
                     <div id="formula-detail-view" class="hidden flex-col h-full">
                         <div class="p-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                            <div class="overflow-hidden">
+                            <div class="overflow-hidden mr-2">
                                 <h2 id="active-formula-name" class="text-base font-bold text-slate-800 cursor-pointer truncate hover:text-teal-600 border-b border-dashed border-slate-300 pb-1">---</h2>
-                                <span class="text-[10px] text-slate-400" id="active-formula-date"></span>
+                                <span class="text-[10px] text-slate-400 block mt-1" id="active-formula-date"></span>
                             </div>
-                            <div class="flex gap-2 shrink-0">
-                                <button id="btn-duplicate-formula" class="btn btn-white border border-blue-200 text-blue-500 py-1.5 px-3 text-xs shadow-none">📑</button>
-                                <button id="btn-print" class="btn btn-white border border-slate-200 text-slate-600 py-1.5 px-3 text-xs shadow-none">🖨</button>
-                                <button id="btn-delete-formula" class="btn btn-white border border-rose-200 text-rose-500 py-1.5 px-3 text-xs shadow-none">🗑</button>
+                            <div class="flex gap-1 shrink-0">
+                                <button id="btn-duplicate-formula" class="btn btn-white border border-blue-200 text-blue-500 py-1 px-2 text-xs shadow-none">📑</button>
+                                <button id="btn-print" class="btn btn-white border border-slate-200 text-slate-600 py-1 px-2 text-xs shadow-none">🖨</button>
+                                <button id="btn-delete-formula" class="btn btn-white border border-rose-200 text-rose-500 py-1 px-2 text-xs shadow-none">🗑</button>
                             </div>
                         </div>
 
                         <div class="p-3 border-b border-slate-100 bg-white shadow-sm z-20">
                             <form id="form-add-comp" class="flex flex-col gap-2">
                                 <div class="flex gap-2 w-full">
-                                    <select id="comp-filter" class="input-field w-1/4 text-xs bg-slate-50 h-9 px-1"><option value="">فیلتر...</option></select>
-                                    <select id="comp-select" class="input-field w-3/4 text-xs h-9 font-bold" required></select>
+                                    <select id="comp-filter" class="input-field w-1/3 text-[10px] bg-slate-50 h-9 px-1 truncate"><option value="">همه...</option></select>
+                                    <select id="comp-select" class="input-field w-2/3 text-xs h-9 font-bold" required></select>
                                 </div>
                                 <div class="flex gap-2 w-full items-center">
                                     <div class="w-1/3 relative">
-                                        <label class="absolute -top-1.5 right-2 bg-white px-1 text-[9px] text-slate-400">واحد</label>
-                                        <select id="comp-unit-select" class="input-field text-xs h-9 bg-slate-50" required>
+                                        <select id="comp-unit-select" class="input-field text-[10px] h-9 bg-slate-50 px-1" required>
                                             <option value="default">-</option>
                                         </select>
                                     </div>
                                     <div class="w-1/3 relative">
-                                        <label class="absolute -top-1.5 right-2 bg-white px-1 text-[9px] text-slate-400">مقدار</label>
-                                        <input type="number" id="comp-qty" step="any" class="input-field text-center font-bold h-9 text-sm" required>
+                                        <input type="number" id="comp-qty" step="any" placeholder="تعداد" class="input-field text-center font-bold h-9 text-sm" required>
                                     </div>
-                                    <button class="btn btn-primary w-1/3 h-9 text-xs shadow-md" type="submit">+ افزودن</button>
+                                    <button class="btn btn-primary w-1/3 h-9 text-xs shadow-md" type="submit">افزودن</button>
                                 </div>
                             </form>
                         </div>
 
+                        <!-- لیست اجزا -->
                         <div class="flex-1 overflow-y-auto bg-slate-50/30 relative">
                             <div class="text-[10px] text-slate-400 px-4 py-2 border-b flex justify-between bg-slate-50 sticky top-0 z-10">
                                 <span>اجزاء و واحد انتخاب شده</span>
@@ -91,6 +92,7 @@
                             <div id="formula-comps-list" class="divide-y divide-slate-100 pb-20"></div>
                         </div>
 
+                        <!-- فوتر قیمت -->
                         <div class="p-4 bg-slate-800 text-slate-200 border-t border-slate-700 shadow-inner z-20 rounded-b-2xl md:rounded-none">
                             <div class="grid grid-cols-3 gap-2 mb-3">
                                 <div><label class="text-[10px] text-slate-400 block mb-1 text-center">دستمزد</label><input id="inp-labor" class="w-full bg-slate-700 border border-slate-600 rounded p-2 text-center text-white text-sm price-input"></div>
@@ -99,7 +101,7 @@
                             </div>
                             <div class="flex justify-between items-end pt-3 border-t border-slate-700">
                                 <span class="text-xs text-slate-400 mb-1">قیمت نهایی:</span>
-                                <div class="text-right"><span id="lbl-final-price" class="text-2xl font-black text-teal-400 tracking-tight">0</span> <span class="text-[10px] text-slate-500 mr-1">تومان</span></div>
+                                <div class="text-right"><span id="lbl-final-price" class="text-xl md:text-2xl font-black text-teal-400 tracking-tight">0</span> <span class="text-[10px] text-slate-500 mr-1">تومان</span></div>
                             </div>
                         </div>
                     </div>
@@ -107,100 +109,95 @@
             </div>
         </div>
 
-        <!-- TAB 2: MATERIALS -->
+        <!-- TAB 2: MATERIALS (با همان ساختار فایل اصلی که JS هندل می‌کند) -->
         <div id="tab-materials" class="hidden">
-            <div class="flex flex-col md:flex-row gap-6">
-                <div class="w-full md:w-1/3 order-2 md:order-1">
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 md:sticky md:top-4 h-auto overflow-y-auto max-h-[90vh]">
+            <!-- کانتینر اصلی: در موبایل ستونی، در دسکتاپ ردیفی -->
+            <div class="flex flex-col lg:flex-row gap-6">
+                
+                <!-- ستون فرم (سمت چپ در دسکتاپ) -->
+                <div class="w-full lg:w-1/3 lg:order-1 order-2">
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 lg:sticky lg:top-4 h-auto overflow-y-auto max-h-[90vh]">
                         <div class="flex justify-between items-center mb-3 border-b pb-2">
                             <h3 class="font-bold text-slate-700 text-sm">مدیریت کالا</h3>
-                            <button id="btn-scraper-trigger" class="text-[10px] text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100 hover:bg-blue-100">🤖 بروزرسانی قیمت‌ها</button>
+                            <button id="btn-scraper-trigger" class="text-[10px] text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100 hover:bg-blue-100 whitespace-nowrap">🤖 بروزرسانی</button>
                         </div>
                         
                         <form id="material-form" class="space-y-3">
                             <input type="hidden" id="mat-id">
                             <select id="mat-category" class="input-field bg-slate-50 text-xs"><option value="">دسته‌بندی...</option></select>
-                            <input type="text" id="mat-name" class="input-field text-xs font-bold" placeholder="نام کالا (مثال: پروفیل 40x40)" required>
-                            <input type="text" id="mat-display-name" class="input-field text-xs" placeholder="نام نمایشی در فاکتور (اختیاری)">
+                            <input type="text" id="mat-name" class="input-field text-xs font-bold" placeholder="نام کالا..." required>
+                            <input type="text" id="mat-display-name" class="input-field text-xs" placeholder="نام در فاکتور (اختیاری)">
 
-                            <!-- Unit Definition Section -->
+                            <!-- بخش واحدها -->
                             <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
                                 <div class="text-[11px] font-bold text-slate-700 mb-2 flex items-center gap-1">
-                                    <span class="text-amber-500">📐</span> تعریف واحدها
+                                    <span class="text-amber-500">📐</span> واحدها
                                 </div>
                                 <div class="flex items-center gap-2 mb-2 bg-white p-2 rounded border border-slate-100">
-                                    <span class="text-[11px] w-16 shrink-0 text-slate-500 font-bold">واحد پایه:</span>
+                                    <span class="text-[11px] w-16 shrink-0 text-slate-500 font-bold">پایه:</span>
                                     <select id="mat-base-unit-select" class="input-field text-xs bg-slate-50 flex-grow font-bold border-none shadow-none p-0 h-6"></select>
                                 </div>
-                                
-                                <!-- Relations List -->
                                 <div id="unit-relations-container" class="space-y-1.5 mb-2"></div>
-                                
-                                <button type="button" id="btn-add-relation" class="text-[10px] text-slate-500 bg-white hover:bg-slate-100 px-2 py-2 rounded border border-slate-200 w-full border-dashed transition-colors">+ افزودن تبدیل (مثل شاخه، بندیل...)</button>
+                                <button type="button" id="btn-add-relation" class="text-[10px] text-slate-500 bg-white hover:bg-slate-100 px-2 py-2 rounded border border-slate-200 w-full border-dashed transition-colors">+ افزودن تبدیل</button>
                             </div>
 
-                            <!-- Price Section -->
+                            <!-- بخش قیمت -->
                             <div class="bg-teal-50 p-3 rounded-xl border border-teal-100">
                                 <label class="text-[10px] text-teal-800 mb-1 block font-bold">قیمت خرید</label>
                                 <div class="flex gap-2 items-center">
-                                    <input type="text" id="mat-price" class="input-field price-input text-sm text-teal-700 font-bold w-2/3 border-teal-200 h-10" placeholder="0" required>
+                                    <input type="text" id="mat-price" class="input-field text-sm text-teal-700 font-bold w-2/3 border-teal-200 h-10 ltr text-left" placeholder="0" required>
                                     <div class="w-1/3 relative">
-                                        <select id="mat-price-unit" class="input-field text-xs bg-white h-10 pt-1 font-bold text-slate-600 border-teal-200"></select>
+                                        <select id="mat-price-unit" class="input-field text-[10px] bg-white h-10 pt-1 font-bold text-slate-600 border-teal-200 truncate"></select>
                                     </div>
                                 </div>
-                                
-                                <!-- چک‌باکس مالیات (جدید) -->
                                 <div class="mt-2 flex items-center gap-2 bg-white p-2 rounded border border-teal-100/50">
                                     <input type="checkbox" id="mat-has-tax" class="w-4 h-4 text-teal-600 rounded border-gray-300 focus:ring-teal-500 cursor-pointer">
-                                    <label for="mat-has-tax" class="text-[11px] text-teal-800 cursor-pointer select-none">مشمول مالیات (۱۰٪ اضافه در محاسبات)</label>
+                                    <label for="mat-has-tax" class="text-[11px] text-teal-800 cursor-pointer select-none">مشمول مالیات (۱۰٪)</label>
                                 </div>
                             </div>
 
-                            <!-- Scraper Section -->
+                            <!-- بخش اسکرپر -->
                             <div class="pt-2 border-t border-dashed mt-2">
                                 <div class="flex justify-between items-center mb-2">
                                     <label class="text-[10px] font-bold text-slate-500 flex items-center gap-1">
-                                        <span>🌐</span> دریافت اتوماتیک قیمت (اختیاری)
+                                        <span>🌐</span> لینک سایت
                                     </label>
                                 </div>
                                 <div class="flex flex-col gap-2">
-                                    <input type="url" id="mat-scraper-url" class="input-field text-xs text-left ltr w-full" placeholder="لینک صفحه (مثلاً لیست قیمت پروفیل)...">
-                                    
-                                    <!-- Anchor Text Field -->
-                                    <div class="relative">
-                                        <label class="absolute -top-1.5 right-2 bg-white px-1 text-[9px] text-blue-500 font-bold">شناسه ردیف</label>
-                                        <input type="text" id="mat-scraper-anchor" class="input-field text-xs w-full border-blue-200 focus:border-blue-400 h-9" placeholder="متن دقیق کالا در جدول (مثلاً: 2*40*40)">
+                                    <div class="flex gap-1">
+                                         <input type="url" id="mat-scraper-url" class="input-field text-xs text-left ltr w-full" placeholder="https://...">
                                     </div>
+                                    <input type="text" id="mat-scraper-anchor" class="input-field text-xs w-full hidden" placeholder="Anchor (غیرفعال)">
                                     
                                     <div class="flex items-center gap-2 mt-1">
                                         <span class="text-[10px] text-slate-400 whitespace-nowrap">واحد سایت:</span>
-                                        <select id="mat-scraper-unit" class="input-field text-xs text-slate-600 bg-white w-full h-9"></select>
+                                        <select id="mat-scraper-unit" class="input-field text-[10px] text-slate-600 bg-white w-full h-9"></select>
                                     </div>
                                 </div>
                                 <input type="hidden" id="mat-scraper-factor" value="1">
                             </div>
 
                             <div class="flex gap-2 pt-2">
-                                <button type="submit" id="mat-submit-btn" class="btn btn-primary flex-grow text-xs h-9">ذخیره تغییرات</button>
+                                <button type="submit" id="mat-submit-btn" class="btn btn-primary flex-grow text-xs h-9">ذخیره</button>
                                 <button type="button" id="mat-cancel-btn" class="btn btn-secondary hidden text-xs h-9">لغو</button>
                             </div>
                         </form>
                     </div>
                 </div>
                 
-                <div class="w-full md:w-2/3 order-1 md:order-2">
+                <!-- ستون لیست (سمت راست در دسکتاپ - بالا در موبایل) -->
+                <div class="w-full lg:w-2/3 lg:order-2 order-1">
                     <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 min-h-[500px]">
                         <div class="flex flex-col sm:flex-row gap-2 mb-4">
                             <input type="text" id="search-materials" placeholder="جستجو..." class="input-field pl-4 h-10 text-xs flex-grow">
                             <select id="sort-materials" class="input-field w-full sm:w-auto text-xs h-10">
-                                <option value="update_desc">بروزرسانی (جدیدترین)</option>
+                                <option value="update_desc">جدیدترین</option>
                                 <option value="category">دسته‌بندی</option>
-                                <option value="price_desc">قیمت (گران‌ترین)</option>
-                                <option value="price_asc">قیمت (ارزان‌ترین)</option>
-                                <option value="name_asc">حروف الفبا</option>
+                                <option value="price_desc">گران‌ترین</option>
+                                <option value="price_asc">ارزان‌ترین</option>
                             </select>
                         </div>
-                        <div id="materials-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+                        <div id="materials-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2"></div>
                     </div>
                 </div>
             </div>
@@ -220,7 +217,7 @@
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                     <h3 class="font-bold text-slate-700 text-center mb-4 border-b pb-2 text-sm">واحدهای اندازه‌گیری</h3>
                     <form id="unit-form" class="flex gap-2 mb-4">
-                        <input type="text" id="unit-name" class="input-field text-xs" placeholder="نام واحد (متر، شاخه)..." required>
+                        <input type="text" id="unit-name" class="input-field text-xs" placeholder="نام واحد..." required>
                         <button class="btn btn-primary px-3 text-lg" type="submit">+</button>
                     </form>
                     <div id="unit-list" class="space-y-1 max-h-80 overflow-y-auto pr-1 custom-scrollbar"></div>
@@ -243,6 +240,7 @@
         </div>
     </div>
 
+    <!-- Print Modal (Same as before) -->
     <div id="print-modal" class="modal-overlay hidden">
         <div class="modal-content max-w-4xl h-[90vh]">
             <div class="bg-slate-100 p-4 border-b flex flex-col md:flex-row gap-4 no-print">

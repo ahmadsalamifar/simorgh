@@ -15,22 +15,31 @@ export function renderRelationsUI() {
         const row = document.createElement('div');
         row.className = 'flex items-center gap-1 bg-white p-1 rounded border border-slate-200 mb-1 shadow-sm text-xs';
         
+        // نکته: استفاده از step="any" برای اعداد اعشاری
         row.innerHTML = `
-            <input type="number" step="any" class="input-field w-12 text-center p-1 h-7 bg-slate-50 rel-qty-unit" value="${rel.qtyUnit || 1}">
+            <input type="number" step="any" class="input-field w-12 text-center p-1 h-7 bg-slate-50 rel-qty-unit" value="${rel.qtyUnit}">
             <select class="input-field w-24 px-1 h-7 text-[10px] rel-name-select">${options}</select>
             <span>=</span>
-            <input type="number" step="any" class="input-field w-12 text-center p-1 h-7 bg-slate-50 rel-qty-base" value="${rel.qtyBase || 1}">
-            <span class="w-12 truncate text-[10px] base-unit-label">${baseUnitName}</span>
+            <input type="number" step="any" class="input-field w-12 text-center p-1 h-7 bg-slate-50 rel-qty-base" value="${rel.qtyBase}">
+            <span class="w-12 truncate text-[10px] base-unit-label" title="${baseUnitName}">${baseUnitName}</span>
             <button type="button" class="text-rose-500 px-2 btn-remove-rel text-lg">×</button>
         `;
+        
         const updateRow = () => {
-            currentUnitRelations[index].name = row.querySelector('.rel-name-select').value;
-            currentUnitRelations[index].qtyUnit = parseFloat(row.querySelector('.rel-qty-unit').value) || 1;
-            currentUnitRelations[index].qtyBase = parseFloat(row.querySelector('.rel-qty-base').value) || 1;
+            const r = currentUnitRelations[index];
+            r.name = row.querySelector('.rel-name-select').value;
+            // تغییر حیاتی: استفاده از parseFloat به جای parseInt یا value خالی
+            r.qtyUnit = parseFloat(row.querySelector('.rel-qty-unit').value) || 1;
+            r.qtyBase = parseFloat(row.querySelector('.rel-qty-base').value) || 1;
             updateUnitDropdowns();
         };
+
         row.querySelectorAll('input, select').forEach(el => el.onchange = updateRow);
-        row.querySelector('.btn-remove-rel').onclick = () => { currentUnitRelations.splice(index, 1); renderRelationsUI(); updateUnitDropdowns(); };
+        row.querySelector('.btn-remove-rel').onclick = () => { 
+            currentUnitRelations.splice(index, 1); 
+            renderRelationsUI(); 
+            updateUnitDropdowns(); 
+        };
         container.appendChild(row);
     });
 }
@@ -39,6 +48,7 @@ export function addRelationRow() {
     const usedNames = currentUnitRelations.map(r => r.name);
     const available = state.units.find(u => !usedNames.includes(u.name));
     const name = available ? available.name : (state.units[0]?.name || 'Unit');
+    // مقادیر پیش‌فرض
     currentUnitRelations.push({ name: name, qtyUnit: 1, qtyBase: 1 });
     renderRelationsUI();
     updateUnitDropdowns();
@@ -51,9 +61,10 @@ export function updateUnitDropdowns() {
     if(!baseElem.value && baseElem.options.length > 0) baseElem.selectedIndex = 0;
     const baseUnit = baseElem.value;
 
+    // لیست تمام واحدهای موجود برای این کالا (پایه + تبدیل شده‌ها)
     let availableUnits = [baseUnit];
     currentUnitRelations.forEach(r => availableUnits.push(r.name));
-    availableUnits = [...new Set(availableUnits)];
+    availableUnits = [...new Set(availableUnits)]; // حذف تکراری
     
     const optionsHtml = availableUnits.map(u => `<option value="${u}">${u}</option>`).join('');
     
@@ -62,25 +73,14 @@ export function updateUnitDropdowns() {
         if(el) {
             const prev = el.value;
             el.innerHTML = optionsHtml;
-            // حفظ مقدار قبلی حتی اگر در لیست جدید نباشد (جلوگیری از پریدن)
-            if (prev && !availableUnits.includes(prev)) {
-                const opt = document.createElement('option');
-                opt.value = prev;
-                opt.innerText = `${prev}`;
-                el.appendChild(opt);
-                el.value = prev;
-            } 
-            else if (availableUnits.includes(prev)) {
-                el.value = prev;
-            } 
-            else if (availableUnits.length > 0) {
-                el.value = availableUnits[0];
-            }
+            // تلاش برای حفظ انتخاب قبلی
+            if (availableUnits.includes(prev)) el.value = prev;
+            else if (availableUnits.length > 0) el.value = availableUnits[0];
         }
     });
     
-    const labels = document.querySelectorAll('.base-unit-label');
-    if(labels) labels.forEach(el => el.innerText = baseUnit);
+    // آپدیت لیبل‌های داخل سطرهای تبدیل
+    document.querySelectorAll('.base-unit-label').forEach(el => el.innerText = baseUnit);
     calculateScraperFactor();
 }
 
@@ -88,7 +88,10 @@ export function getFactorToBase(unitName) {
     const baseElem = document.getElementById('mat-base-unit-select');
     if (!baseElem || unitName === baseElem.value) return 1;
     const rel = currentUnitRelations.find(r => r.name === unitName);
-    return rel ? (rel.qtyBase / rel.qtyUnit) : 1;
+    if(rel && rel.qtyUnit !== 0) {
+        return rel.qtyBase / rel.qtyUnit;
+    }
+    return 1;
 }
 
 export function calculateScraperFactor() {
@@ -102,16 +105,13 @@ export function calculateScraperFactor() {
     
     let rate = 1;
     if (sFactor !== 0) rate = pFactor / sFactor;
-    factorInput.value = parseFloat(rate.toFixed(4)); 
+    
+    // جلوگیری از اعداد اعشاری طولانی بی‌معنی
+    factorInput.value = parseFloat(rate.toFixed(6)); 
 }
 
-// دریافت امن اطلاعات (جلوگیری از خطای Null)
 export function getUnitData() {
-    const getVal = (id) => {
-        const el = document.getElementById(id);
-        return el ? el.value : null; 
-    };
-
+    const getVal = (id) => document.getElementById(id)?.value;
     return {
         base: getVal('mat-base-unit-select') || 'عدد',
         others: currentUnitRelations,
@@ -131,9 +131,13 @@ export function setUnitData(rels) {
     }
     baseSelect.value = savedBase;
 
-    currentUnitRelations = (rels.others || []).map(r => ({ name: r.name, qtyUnit: r.qtyUnit || 1, qtyBase: r.qtyBase || 1 }));
-    renderRelationsUI();
+    currentUnitRelations = (rels.others || []).map(r => ({ 
+        name: r.name, 
+        qtyUnit: parseFloat(r.qtyUnit) || 1, // Parse Float Fix
+        qtyBase: parseFloat(r.qtyBase) || 1 
+    }));
     
+    renderRelationsUI();
     updateUnitDropdowns();
     
     if(rels.selected_purchase) setSelectValue('mat-price-unit', rels.selected_purchase);
@@ -157,6 +161,7 @@ export function resetUnitData() {
 function setSelectValue(id, val) {
     const el = document.getElementById(id);
     if(!el) return;
+    // اگر مقدار در لیست نیست، موقتا اضافه کن
     if(![...el.options].some(o=>o.value===val)) {
         const opt = document.createElement('option');
         opt.value = val;
