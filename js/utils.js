@@ -1,60 +1,76 @@
-// تابع تبدیل رشته (شامل کاما، نقطه و اعداد فارسی) به عدد خالص
+// توابع کمکی و ابزارها
+
+// فرمت کردن قیمت (اعداد فارسی، ۳ رقم ۳ رقم، بدون اعشار)
+export function formatPrice(n) {
+    if (n === undefined || n === null || isNaN(n)) return '۰';
+    // Math.round برای حذف اعشار
+    // 'fa-IR' برای تبدیل به اعداد فارسی
+    return Math.round(Number(n)).toLocaleString('fa-IR');
+}
+
+// تبدیل عدد (فارسی یا انگلیسی) به عدد جاوااسکریپت برای محاسبات
 export function parseLocaleNumber(stringNumber) {
-    if (!stringNumber && stringNumber !== 0) return 0;
-    let str = stringNumber.toString();
-    
-    // ۱. تبدیل اعداد فارسی/عربی به انگلیسی
-    str = str.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
-             .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
-    
-    // ۲. حذف کاما (جداکننده هزارگان استاندارد)
-    str = str.replace(/,/g, '');
-
-    // ۳. مدیریت نقطه (اگر کاربر از نقطه به عنوان جداکننده هزارگان استفاده کرده باشد)
-    // اگر بیش از یک نقطه وجود دارد (مثلاً 4.500.000)، یعنی جداکننده است -> حذف همه نقاط
-    const dotCount = (str.match(/\./g) || []).length;
-    if (dotCount > 1) {
-        str = str.replace(/\./g, '');
-    }
-    
-    // ۴. حذف تمام کاراکترها به جز اعداد، نقطه و منفی
-    const cleanStr = str.replace(/[^0-9.-]/g, '');
-    
-    return parseFloat(cleanStr) || 0;
+    if (!stringNumber) return 0;
+    // تبدیل اعداد فارسی به انگلیسی
+    const english = stringNumber.toString().replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+    // حذف کاما
+    const clean = english.replace(/,/g, '');
+    return parseFloat(clean) || 0;
 }
 
-// تابع فرمت‌دهی قیمت (سه رقم سه رقم)
-export function formatPrice(price) {
-    if (price === undefined || price === null || isNaN(price)) return '';
-    return Number(price).toLocaleString('en-US', { maximumFractionDigits: 2 });
+// فرمت کردن تاریخ شمسی
+export function formatDate(d) {
+    return d ? new Date(d).toLocaleDateString('fa-IR') : '';
 }
 
-// تابع نمایش تاریخ شمسی
-export function formatDate(dateString) {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('fa-IR');
-}
-
+// بج (Badge) تاریخ بروزرسانی
 export function getDateBadge(dateString) {
     if (!dateString) return '';
-    const d = new Date(dateString);
-    return d.toLocaleDateString('fa-IR', {month: 'short', day: 'numeric'}) + 
-           ' ' + d.toLocaleTimeString('fa-IR', {hour: '2-digit', minute:'2-digit'});
+    const date = new Date(dateString);
+    const diffTime = Math.abs(new Date() - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    let colorClass = 'bg-emerald-100 text-emerald-700 border-emerald-200'; // جدید
+    if(diffDays > 7) colorClass = 'bg-orange-100 text-orange-700 border-orange-200'; // هفته پیش
+    if(diffDays > 30) colorClass = 'bg-slate-100 text-slate-500 border-slate-200'; // قدیمی
+    
+    return `<span class="text-[10px] px-1.5 py-0.5 rounded border ${colorClass}">${formatDate(dateString)}</span>`;
 }
 
-// مدیریت مودال‌ها
+// اعمال فرمت ۳ رقم هنگام تایپ (پشتیبانی از اعداد فارسی)
+export function formatInput(el) {
+    const val = parseLocaleNumber(el.value);
+    if (val === 0 && el.value.trim() === '') return;
+    // نمایش مجدد به صورت فارسی و ۳ رقم ۳ رقم
+    el.value = val.toLocaleString('fa-IR');
+}
+
+// تغییر تب‌ها (Navigation)
+export function switchTab(id) {
+    ['formulas', 'materials', 'categories', 'store'].forEach(t => {
+        const el = document.getElementById('tab-' + t);
+        const btn = document.getElementById('btn-tab-' + t);
+        if (el) el.classList.add('hidden');
+        if (btn) btn.classList.remove('active');
+    });
+    const target = document.getElementById('tab-' + id);
+    const targetBtn = document.getElementById('btn-tab-' + id);
+    if (target) target.classList.remove('hidden');
+    if (targetBtn) targetBtn.classList.add('active');
+}
+
 export function openModal(id) {
     const el = document.getElementById(id);
-    if(el) {
+    if (el) {
         el.classList.remove('hidden');
-        el.classList.add('flex');
+        el.style.display = 'flex';
     }
 }
 
 export function closeModal(id) {
     const el = document.getElementById(id);
-    if(el) {
+    if (el) {
         el.classList.add('hidden');
-        el.classList.remove('flex');
+        el.style.display = 'none';
     }
 }
