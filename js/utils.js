@@ -11,7 +11,6 @@ export function parseLocaleNumber(stringNumber) {
     str = str.replace(/,/g, '');
 
     // ۳. مدیریت نقطه (اگر کاربر از نقطه به عنوان جداکننده هزارگان استفاده کرده باشد)
-    // اگر بیش از یک نقطه وجود دارد (مثلاً 4.500.000)، یعنی جداکننده است -> حذف همه نقاط
     const dotCount = (str.match(/\./g) || []).length;
     if (dotCount > 1) {
         str = str.replace(/\./g, '');
@@ -57,4 +56,34 @@ export function closeModal(id) {
         el.classList.add('hidden');
         el.classList.remove('flex');
     }
+}
+
+// *** تابع گمشده: سوییچ تب‌ها ***
+export function switchTab(tabId) {
+    // 1. مخفی کردن همه تب‌ها
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    
+    // 2. غیرفعال کردن استایل دکمه‌ها (حذف کلاس اکتیو)
+    document.querySelectorAll('.sidebar-item').forEach(el => {
+        el.classList.remove('bg-emerald-50', 'text-emerald-600', 'border-r-4', 'border-emerald-500');
+        el.classList.add('text-slate-600');
+    });
+
+    // 3. نمایش تب انتخاب شده
+    const target = document.getElementById(tabId);
+    if(target) target.classList.remove('hidden');
+
+    // 4. فعال کردن دکمه مربوطه (پیدا کردن دکمه‌ای که این تابع را صدا زده)
+    // ما فرض می‌کنیم دکمه‌ها یک ویژگی data-target یا ID مشخص دارند، یا بر اساس متن جستجو می‌کنیم
+    // راه ساده‌تر: پیدا کردن دکمه‌ای که onclick آن شامل اسم تب است
+    const btns = document.querySelectorAll('.sidebar-item');
+    btns.forEach(btn => {
+        if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabId)) {
+            btn.classList.remove('text-slate-600');
+            btn.classList.add('bg-emerald-50', 'text-emerald-600', 'border-r-4', 'border-emerald-500');
+        }
+    });
+    
+    // اسکرول به بالا در موبایل
+    if(window.innerWidth < 768) window.scrollTo({top: 0, behavior: 'smooth'});
 }
