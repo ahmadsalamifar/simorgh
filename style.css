@@ -4,7 +4,8 @@
 }
 
 body { font-family: 'Vazirmatn', sans-serif; background-color: #f1f5f9; color: #1e293b; margin: 0; height: 100vh; overflow: hidden; }
-.hidden { display: none !important; }
+
+/* اصلاح مهم: کلاس hidden باید همیشه برنده باشد، پس آن را در آخر یا با اولویت بالا تعریف می‌کنیم */
 .flex { display: flex !important; }
 
 /* اسکرول بار سفارشی */
@@ -52,3 +53,6 @@ body { font-family: 'Vazirmatn', sans-serif; background-color: #f1f5f9; color: #
     .modal-content { box-shadow: none; border: none; max-width: none; height: auto; overflow: visible; }
     #print-area { overflow: visible; padding: 0; }
 }
+
+/* انتقال کلاس hidden به انتها برای اطمینان از اعمال شدن */
+.hidden { display: none !important; }
