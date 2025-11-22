@@ -2,24 +2,17 @@ import { state } from './config.js';
 import { formatPrice, formatDate } from './utils.js';
 import { calculateCost, getUnitFactor } from './formulas_calc.js';
 
-// تابع کمکی قدرتمند برای پارس کردن اجزا
-// این تابع مشکل Double-Stringify شدن داده‌ها در Appwrite را حل می‌کند
+// تابع کمکی برای پارس کردن اجزا (مدیریت فرمت‌های مختلف دیتابیس)
 function parseComponents(data) {
     if (!data) return [];
     if (Array.isArray(data)) return data;
     
     try {
-        // مرحله اول پارس
         const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-        
-        // چک کردن اینکه آیا نتیجه هنوز رشته است؟ (مشکل Double Stringify)
-        if (typeof parsed === 'string') {
-            return JSON.parse(parsed);
-        }
-        
+        if (typeof parsed === 'string') return JSON.parse(parsed); // Double stringified fix
         return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
-        console.error("Error parsing components:", e, data);
+        console.error("Error parsing components:", e);
         return [];
     }
 }
@@ -39,16 +32,13 @@ export function renderFormulaList(filterText = '') {
     el.innerHTML = list.map(f => {
         const calc = calculateCost(f); 
         const isActive = f.$id === state.activeFormulaId;
-        
-        // نمایش تعداد اقلام در لیست اصلی برای اطمینان کاربر
         const comps = parseComponents(f.components);
-        const count = comps.length;
 
         return `
         <div class="p-3 border-b border-slate-100 cursor-pointer hover:bg-teal-50 transition-colors ${isActive ? 'bg-teal-50 border-r-4 border-teal-600' : ''}" data-id="${f.$id}">
             <div class="font-bold text-xs text-slate-700 pointer-events-none flex justify-between">
                 <span>${f.name}</span>
-                <span class="bg-slate-100 text-slate-500 px-1.5 rounded text-[9px]">${count} جزء</span>
+                <span class="bg-slate-100 text-slate-500 px-1.5 rounded text-[9px] h-fit">${comps.length}</span>
             </div>
             <div class="text-[10px] text-slate-400 mt-1 pointer-events-none flex justify-between items-end">
                 <span>${formatDate(f.$updatedAt)}</span>
@@ -62,7 +52,7 @@ export function renderFormulaList(filterText = '') {
 export function renderFormulaDetail(f) {
     if (!f) return;
 
-    // 1. پر کردن هدر و اطلاعات کلی
+    // 1. هدر و اطلاعات کلی
     const nameEl = document.getElementById('active-formula-name');
     const dateEl = document.getElementById('active-formula-date');
     if(nameEl) nameEl.innerText = f.name;
@@ -80,17 +70,27 @@ export function renderFormulaDetail(f) {
     // 2. رندر لیست اجزا
     const listEl = document.getElementById('formula-comps-list');
     if (listEl) {
-        // استفاده از تابع پارس جدید
         const comps = parseComponents(f.components);
-        
+        console.log("Rendering detail components:", comps); // لاگ برای بررسی داده‌ها
+
         if (comps.length === 0) {
             listEl.innerHTML = '<div class="p-8 text-center text-slate-400 text-xs">اجزای سازنده را اضافه کنید...</div>';
         } else {
-            listEl.innerHTML = comps.map((c, idx) => generateComponentRow(c, idx)).join('');
+            // تولید HTML با ایمنی بالا
+            const rowsHtml = comps.map((c, idx) => {
+                try {
+                    return generateComponentRow(c, idx);
+                } catch (err) {
+                    console.error("Row render fail:", err, c);
+                    return `<div class="p-2 text-xs text-red-500 border-b">خطا در نمایش آیتم ${idx + 1}</div>`;
+                }
+            }).join('');
+            
+            listEl.innerHTML = rowsHtml;
         }
     }
     
-    // 3. نمایش قیمت نهایی
+    // 3. قیمت نهایی
     const calc = calculateCost(f);
     const lblFinal = document.getElementById('lbl-final-price');
     if(lblFinal) lblFinal.innerText = formatPrice(calc.final);
@@ -99,28 +99,35 @@ export function renderFormulaDetail(f) {
     updateCompSelect(); 
 }
 
-// تابع کمکی برای تولید HTML هر سطر جزء
+// تابع تولید HTML سطر با مدیریت خطای داخلی
 function generateComponentRow(c, idx) {
-    let name = '?', unitName = '-', price = 0, total = 0;
+    let name = '---', unitName = '-', price = 0, total = 0;
     let taxBadge = '', warning = '';
+    
+    // اگر شناسه کالا وجود ندارد
+    if (!c.id) {
+        return `<div class="p-2 text-xs text-slate-400 border-b">آیتم نامعتبر (شناسه ندارد) <button class="text-rose-500 btn-del-comp float-left" data-idx="${idx}">×</button></div>`;
+    }
 
     const type = (c.type || '').toLowerCase();
 
-    try {
-        if (type === 'mat' || type === 'material') {
-            const m = state.materials.find(x => x.$id === c.id);
-            if (m) { 
-                name = m.display_name || m.name;
-                unitName = c.unit || 'واحد';
-                if (m.has_tax) taxBadge = '<span class="text-[9px] text-rose-500 bg-rose-50 px-1 rounded ml-1 border border-rose-100">+۱۰٪</span>';
+    if (type.includes('mat')) {
+        const m = state.materials.find(x => x.$id === c.id);
+        if (m) { 
+            name = m.display_name || m.name;
+            unitName = c.unit || 'واحد';
+            if (m.has_tax) taxBadge = '<span class="text-[9px] text-rose-500 bg-rose-50 px-1 rounded ml-1">+۱۰٪</span>';
 
+            try {
                 let baseMatPrice = m.price || 0;
                 if (m.has_tax) baseMatPrice *= 1.10;
 
                 let rels = {};
-                try {
-                    rels = typeof m.unit_relations === 'string' ? JSON.parse(m.unit_relations) : (m.unit_relations || {});
-                } catch(e) {}
+                if (typeof m.unit_relations === 'string') {
+                     try { rels = JSON.parse(m.unit_relations); } catch(e){}
+                } else {
+                     rels = m.unit_relations || {};
+                }
 
                 const priceUnit = m.purchase_unit || rels.price_unit || 'عدد';
                 const priceFactor = getUnitFactor(m, priceUnit);
@@ -130,50 +137,48 @@ function generateComponentRow(c, idx) {
                     const basePrice = baseMatPrice / priceFactor;
                     price = basePrice * selectedUnitFactor;
                 }
-            } else { 
-                // تلاش برای نشان دادن حداقل اطلاعات اگر کالا پیدا نشد
-                name = `کالای حذف شده (${c.id.substring(0,5)}...)`; 
+            } catch(e) { 
+                console.warn("Price calc error:", e);
+                price = m.price || 0; 
                 warning = '⚠️'; 
             }
-        } else if (type === 'form' || type === 'formula') {
-            const sub = state.formulas.find(x => x.$id === c.id);
-            if (sub) { 
-                name = `🔗 ${sub.name}`; 
-                unitName = 'عدد'; 
-                price = calculateCost(sub).final; 
-            } else { 
-                name = 'فرمول حذف شده'; 
-                warning = '⚠️'; 
-            }
-        } else {
-            name = 'نامشخص';
-            warning = '❓';
+        } else { 
+            name = `کالای حذف شده (${c.id.substr(0,4)}...)`; 
+            warning = '❌'; 
         }
-        
-        total = price * (c.qty || 0);
-
-    } catch (err) {
-        console.error("Row render error", err);
-        name = "خطا در نمایش";
-        warning = "❌";
+    } else if (type.includes('form')) {
+        const sub = state.formulas.find(x => x.$id === c.id);
+        if (sub) { 
+            name = `🔗 ${sub.name}`; 
+            unitName = 'عدد'; 
+            price = calculateCost(sub).final; 
+        } else { 
+            name = 'فرمول حذف شده'; 
+            warning = '❌'; 
+        }
+    } else {
+        name = `نوع نامشخص (${type})`;
+        warning = '❓';
     }
     
+    total = price * (c.qty || 0);
+    
     return `
-    <div class="flex justify-between items-center p-3 text-sm hover:bg-slate-50 group border-b border-slate-50">
+    <div class="flex justify-between items-center p-3 text-sm hover:bg-slate-50 group border-b border-slate-100 transition-colors">
         <div class="flex-grow min-w-0">
             <div class="font-bold text-slate-700 text-xs flex items-center gap-1 truncate">
                 ${warning} ${name} ${taxBadge}
             </div>
-            <div class="text-[10px] text-slate-500 mt-1">
-                <span class="font-mono font-bold bg-slate-200 px-1.5 rounded text-slate-700">${c.qty || 0}</span>
-                <span class="mx-1 text-teal-700">${unitName}</span>
-                <span class="opacity-40 mx-1">×</span>
+            <div class="text-[10px] text-slate-500 mt-1 flex items-center">
+                <span class="font-mono font-bold bg-slate-200 px-1.5 rounded text-slate-700 ml-1">${c.qty || 0}</span>
+                <span class="text-teal-700 ml-1">${unitName}</span>
+                <span class="opacity-40 ml-1">×</span>
                 <span class="opacity-70 font-mono">${formatPrice(price)}</span>
             </div>
         </div>
         <div class="flex items-center gap-2 shrink-0">
             <div class="text-right font-mono font-bold text-slate-700 text-xs w-20">${formatPrice(total)}</div>
-            <button type="button" class="text-rose-400 lg:opacity-0 group-hover:opacity-100 px-2 btn-del-comp transition-opacity" data-idx="${idx}">×</button>
+            <button type="button" class="text-rose-400 lg:opacity-0 group-hover:opacity-100 px-2 py-1 btn-del-comp transition-opacity hover:bg-rose-50 rounded" data-idx="${idx}">×</button>
         </div>
     </div>`;
 }
