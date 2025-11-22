@@ -32,13 +32,12 @@ export function renderFormulaList(filterText = '') {
 export function renderFormulaDetail(f) {
     if (!f) return;
 
-    // ست کردن مقادیر هدر
+    // 1. پر کردن هدر و اطلاعات کلی
     const nameEl = document.getElementById('active-formula-name');
     const dateEl = document.getElementById('active-formula-date');
     if(nameEl) nameEl.innerText = f.name;
     if(dateEl) dateEl.innerText = "بروزرسانی: " + formatDate(f.$updatedAt);
     
-    // ست کردن اینپوت‌های هزینه
     const setVal = (id, val) => { 
         const el = document.getElementById(id); 
         if(el) el.value = typeof val === 'number' ? formatPrice(val) : val; 
@@ -48,28 +47,37 @@ export function renderFormulaDetail(f) {
     const profitEl = document.getElementById('inp-profit');
     if(profitEl) profitEl.value = f.profit || 0;
     
-    // پارس کردن اجزا
-    let comps = [];
-    try { comps = typeof f.components === 'string' ? JSON.parse(f.components) : f.components; } catch(e) {}
-    if (!Array.isArray(comps)) comps = [];
-    
+    // 2. رندر لیست اجزا
     const listEl = document.getElementById('formula-comps-list');
-    
-    if (comps.length === 0) {
-        listEl.innerHTML = '<div class="p-8 text-center text-slate-400 text-xs">اجزای سازنده را اضافه کنید...</div>';
-    } else {
-        listEl.innerHTML = comps.map((c, idx) => {
-            return generateComponentRow(c, idx);
-        }).join('');
+    if (listEl) {
+        let comps = [];
+        try { 
+            comps = typeof f.components === 'string' ? JSON.parse(f.components) : f.components; 
+        } catch(e) { console.error("JSON Parse Error:", e); }
+        
+        if (!Array.isArray(comps)) comps = [];
+        
+        if (comps.length === 0) {
+            listEl.innerHTML = '<div class="p-8 text-center text-slate-400 text-xs">اجزای سازنده را اضافه کنید...</div>';
+        } else {
+            listEl.innerHTML = comps.map((c, idx) => {
+                try {
+                    return generateComponentRow(c, idx);
+                } catch(err) {
+                    console.error("Error rendering row:", err);
+                    return ''; // اگر یک سطر خطا داشت، کل لیست خراب نشود
+                }
+            }).join('');
+        }
     }
     
-    // نمایش قیمت نهایی
+    // 3. نمایش قیمت نهایی
     const calc = calculateCost(f);
     const lblFinal = document.getElementById('lbl-final-price');
     if(lblFinal) lblFinal.innerText = formatPrice(calc.final);
     
     updateDropdowns();
-    updateCompSelect(); // آپدیت دراپ‌داون افزودن کالا
+    updateCompSelect(); 
 }
 
 // تابع کمکی برای تولید HTML هر سطر جزء
@@ -88,7 +96,6 @@ function generateComponentRow(c, idx) {
                 let baseMatPrice = m.price;
                 if (m.has_tax) baseMatPrice *= 1.10;
 
-                // محاسبه قیمت واحد انتخابی
                 const rels = typeof m.unit_relations === 'string' ? JSON.parse(m.unit_relations) : (m.unit_relations || {});
                 const priceUnit = m.purchase_unit || rels.price_unit || 'عدد';
                 
@@ -108,7 +115,6 @@ function generateComponentRow(c, idx) {
             warning = '⚠️'; 
         }
     } else {
-        // زیر فرمول
         const sub = state.formulas.find(x => x.$id === c.id);
         if (sub) { 
             name = `🔗 ${sub.name}`; 
@@ -154,7 +160,7 @@ export function updateDropdowns() {
         ${cats}
         <option value="FORM">فرمول‌ها (محصولات)</option>
     `;
-    filterEl.value = current;
+    if(current) filterEl.value = current;
 }
 
 export function updateCompSelect() {
@@ -168,7 +174,10 @@ export function updateCompSelect() {
         const otherFormulas = state.formulas.filter(x => x.$id !== state.activeFormulaId);
         html += `<optgroup label="فرمول‌ها">` + otherFormulas.map(x => `<option value="FORM:${x.$id}">🔗 ${x.name}</option>`).join('') + `</optgroup>`;
     } else {
-        // نمایش بر اساس دسته‌بندی
+        // --- اصلاح مهم: نمایش کالاهای یتیم (دسته‌بندی حذف شده) ---
+        const validCategoryIds = new Set(state.categories.map(c => c.$id));
+
+        // 1. نمایش بر اساس دسته‌بندی‌های موجود
         state.categories.forEach(cat => {
             if (filter && filter !== 'FORM' && filter !== cat.$id) return;
             
@@ -178,10 +187,15 @@ export function updateCompSelect() {
             }
         });
         
-        // کالا های بدون دسته
-        const uncategorized = state.materials.filter(x => !x.category_id);
-        if ((!filter || filter === 'null') && uncategorized.length) {
-            html += `<optgroup label="سایر">` + uncategorized.map(x => `<option value="MAT:${x.$id}">${x.name}</option>`).join('') + `</optgroup>`;
+        // 2. نمایش کالاهای بدون دسته یا با دسته نامعتبر در بخش "سایر"
+        if (!filter || filter === '') {
+            const uncategorized = state.materials.filter(x => 
+                !x.category_id || !validCategoryIds.has(x.category_id)
+            );
+            
+            if (uncategorized.length) {
+                html += `<optgroup label="سایر (بدون دسته‌بندی)">` + uncategorized.map(x => `<option value="MAT:${x.$id}">${x.name}</option>`).join('') + `</optgroup>`;
+            }
         }
     }
     sel.innerHTML = html;
@@ -194,7 +208,6 @@ export function updateCompUnitSelect() {
     if (!matSelect || !unitSelect) return;
     
     const val = matSelect.value;
-    // اگر چیزی انتخاب نشده یا فرمول است (واحد فرمول همیشه عدد است)
     if (!val || val.startsWith('FORM:')) { 
         unitSelect.innerHTML = '<option value="count">عدد</option>'; 
         return; 
@@ -215,11 +228,9 @@ export function updateCompUnitSelect() {
             if (defaultUnit && !options.includes(defaultUnit)) options.push(defaultUnit);
             
             if (options.length === 0) options.push('عدد');
-            // حذف تکراری‌ها
             options = [...new Set(options)];
             
             unitSelect.innerHTML = options.map(u => `<option value="${u}">${u}</option>`).join('');
-            
             if (defaultUnit) unitSelect.value = defaultUnit;
             
         } catch(e) { 
