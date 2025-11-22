@@ -3,17 +3,20 @@ import { state, APPWRITE_CONFIG } from './config.js';
 import { switchTab } from './utils.js';
 
 export function setupStore(refreshCallback) {
-    // منطق فروشگاه در رندر هندل می‌شود
+    // منطق در رندر
 }
 
 export function renderStore(refreshCallback) {
     const el = document.getElementById('store-container');
+    // --- اصلاح مهم: چک کردن وجود المنت قبل از دسترسی ---
+    if(!el) return; 
+    
     if(!state.publicFormulas.length) { el.innerHTML = '<p class="col-span-full text-center text-slate-400 text-xs">بانک فرمول خالی است</p>'; return; }
     
     el.innerHTML = state.publicFormulas.map(f => `
         <div class="bg-white p-4 rounded-2xl border shadow-sm text-center hover:shadow-md transition-shadow">
             <div class="font-black text-lg text-slate-700 mb-2">${f.name}</div>
-            <div class="text-xs text-slate-400 mb-4">شامل ${JSON.parse(f.components).length} جزء</div>
+            <div class="text-xs text-slate-400 mb-4">شامل ${JSON.parse(f.components || '[]').length} جزء</div>
             <button class="btn btn-secondary text-xs w-full btn-copy-store py-2 hover:bg-teal-50 hover:text-teal-700" data-id="${f.$id}">📥 افزودن به لیست من</button>
         </div>
     `).join('');
