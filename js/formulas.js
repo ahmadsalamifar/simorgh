@@ -4,6 +4,11 @@ import { parseLocaleNumber, openModal, closeModal } from './utils.js';
 import * as UI from './formulas_ui.js';
 
 export function setupFormulas(refreshCallback) {
+    // --- مرحله ۱: تولید و تزریق HTML ---
+    UI.initFormulaUI();
+
+    // --- مرحله ۲: اتصال رویدادها (بعد از اینکه المنت‌ها ساخته شدند) ---
+    
     // مدیریت مدال
     const btnNew = document.getElementById('btn-open-new-formula');
     if (btnNew) btnNew.onclick = () => openModal('new-formula-modal');

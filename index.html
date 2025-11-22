@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>سامانه مدیریت تولید سیمرغ (نسخه ۳.۲)</title>
+    <title>سامانه مدیریت تولید سیمرغ (نسخه ۳.۳)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.0"></script>
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
@@ -39,89 +39,8 @@
         <!-- فضای اصلی محتوا -->
         <main class="flex-1 overflow-hidden p-2 md:p-4">
             
-            <!-- TAB 1: FORMULAS -->
-            <div id="tab-formulas" class="h-full flex flex-col lg:flex-row gap-4">
-                
-                <!-- لیست سمت راست (مستر) -->
-                <div class="w-full lg:w-1/3 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-[300px] lg:h-full shrink-0">
-                    <div class="p-3 border-b border-slate-100 flex gap-2 bg-slate-50 items-center sticky top-0 z-10">
-                        <input type="text" id="search-formulas" placeholder="جستجو..." class="input-field text-xs h-10">
-                        <button id="btn-open-new-formula" class="bg-teal-600 text-white w-10 h-10 rounded-xl font-bold shadow text-xl hover:bg-teal-700 shrink-0 transition-colors" type="button">+</button>
-                    </div>
-                    <div id="formula-master-list" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar"></div>
-                </div>
-                
-                <!-- پنل جزئیات (وسط) -->
-                <div class="w-full lg:w-2/3 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col relative min-h-[500px] lg:h-full" id="detail-panel">
-                    
-                    <!-- حالت خالی -->
-                    <div id="formula-detail-empty" class="absolute inset-0 flex flex-col items-center justify-center text-slate-300 bg-white z-10 p-4 text-center">
-                        <span class="text-5xl mb-4 opacity-20">🏗️</span>
-                        <p class="text-sm font-bold text-slate-400">محصولی انتخاب نشده است</p>
-                    </div>
-                    
-                    <!-- حالت نمایش جزئیات -->
-                    <div id="formula-detail-view" class="hidden flex-col h-full w-full absolute inset-0 z-20 bg-white">
-                        
-                        <!-- هدر فرمول -->
-                        <div class="p-3 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
-                            <div class="overflow-hidden mr-2">
-                                <h2 id="active-formula-name" class="text-base font-bold text-slate-800 cursor-pointer truncate hover:text-teal-600 border-b border-dashed border-slate-300 pb-1">---</h2>
-                                <span class="text-[10px] text-slate-400 block mt-1" id="active-formula-date"></span>
-                            </div>
-                            <div class="flex gap-1 shrink-0">
-                                <button id="btn-duplicate-formula" class="btn btn-white border border-blue-200 text-blue-500 py-1 px-2 text-xs shadow-none" title="کپی">📑</button>
-                                <button id="btn-print" class="btn btn-white border border-slate-200 text-slate-600 py-1 px-2 text-xs shadow-none" title="چاپ">🖨</button>
-                                <button id="btn-delete-formula" class="btn btn-white border border-rose-200 text-rose-500 py-1 px-2 text-xs shadow-none" title="حذف">🗑</button>
-                            </div>
-                        </div>
-
-                        <!-- فرم افزودن کالا -->
-                        <div class="p-3 border-b border-slate-100 bg-white shadow-sm z-20 shrink-0">
-                            <form id="form-add-comp" class="flex flex-col gap-2">
-                                <div class="flex gap-2 w-full">
-                                    <select id="comp-filter" class="input-field w-1/3 text-[10px] bg-slate-50 h-9 px-1 truncate"><option value="">همه...</option></select>
-                                    <select id="comp-select" class="input-field w-2/3 text-xs h-9 font-bold" required></select>
-                                </div>
-                                <div class="flex gap-2 w-full items-center">
-                                    <div class="w-1/3 relative">
-                                        <select id="comp-unit-select" class="input-field text-[10px] h-9 bg-slate-50 px-1" required>
-                                            <option value="default">-</option>
-                                        </select>
-                                    </div>
-                                    <div class="w-1/3 relative">
-                                        <input type="number" step="any" id="comp-qty" placeholder="تعداد" class="input-field text-center font-bold h-9 text-sm" required>
-                                    </div>
-                                    <button class="btn btn-primary w-1/3 h-9 text-xs shadow-md" type="submit">افزودن</button>
-                                </div>
-                            </form>
-                        </div>
-
-                        <!-- لیست اجزا (مهمترین بخش برای مشکل شما) -->
-                        <div class="flex-1 overflow-y-auto bg-slate-50/30 relative w-full">
-                            <div class="text-[10px] text-slate-400 px-4 py-2 border-b flex justify-between bg-slate-50 sticky top-0 z-10">
-                                <span>اجزاء و واحد انتخاب شده</span>
-                                <span>هزینه کل</span>
-                            </div>
-                            <!-- اینجا محل نمایش لیست است -->
-                            <div id="formula-comps-list" class="divide-y divide-slate-100 pb-20 w-full"></div>
-                        </div>
-
-                        <!-- فوتر مالی -->
-                        <div class="p-4 bg-slate-800 text-slate-200 border-t border-slate-700 shadow-inner z-30 shrink-0">
-                            <div class="grid grid-cols-3 gap-2 mb-3">
-                                <div><label class="text-[10px] text-slate-400 block mb-1 text-center">دستمزد</label><input id="inp-labor" class="w-full bg-slate-700 border border-slate-600 rounded p-2 text-center text-white text-sm price-input"></div>
-                                <div><label class="text-[10px] text-slate-400 block mb-1 text-center">سربار</label><input id="inp-overhead" class="w-full bg-slate-700 border border-slate-600 rounded p-2 text-center text-white text-sm price-input"></div>
-                                <div><label class="text-[10px] text-slate-400 block mb-1 text-center">سود %</label><input type="number" id="inp-profit" class="w-full bg-slate-700 border border-slate-600 rounded p-2 text-center text-white text-sm"></div>
-                            </div>
-                            <div class="flex justify-between items-end pt-3 border-t border-slate-700">
-                                <span class="text-xs text-slate-400 mb-1">قیمت نهایی:</span>
-                                <div class="text-right"><span id="lbl-final-price" class="text-xl md:text-2xl font-black text-teal-400 tracking-tight">0</span> <span class="text-[10px] text-slate-500 mr-1">تومان</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- TAB 1: FORMULAS (Empty Container - Content injected via JS) -->
+            <div id="tab-formulas" class="h-full flex flex-col lg:flex-row gap-4"></div>
 
             <!-- TAB 2: MATERIALS -->
             <div id="tab-materials" class="hidden h-full flex flex-col lg:flex-row gap-6 overflow-y-auto lg:overflow-hidden">
@@ -194,6 +113,7 @@
                                         <div class="w-1/2">
                                             <span class="text-[10px] text-slate-400 block mb-1">ضریب تبدیل:</span>
                                             <input type="number" step="any" id="mat-scraper-factor" class="input-field text-xs w-full h-8 text-center font-bold dir-ltr" value="1">
+                                            <div id="scraper-factor-hint" class="text-[10px] text-slate-400 mt-1 text-center"></div>
                                         </div>
                                     </div>
                                 </div>
