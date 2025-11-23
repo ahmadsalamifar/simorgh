@@ -1,38 +1,36 @@
-// js/core/api.js
-// فقط وظیفه ارتباط خام با دیتابیس را دارد
-import { db, functions, ID, Query, APPWRITE_CONFIG, state } from './config.js';
+// لایه ارتباط با سرور
+// وظیفه: فقط ارسال و دریافت داده خام (بدون منطق UI)
+
+import { db, functions, ID, APPWRITE_CONFIG } from './config.js';
 
 export const api = {
+    // عملیات CRUD پایه
     create: (col, data) => db.createDocument(APPWRITE_CONFIG.DB_ID, col, ID.unique(), data),
+    
     update: (col, id, data) => db.updateDocument(APPWRITE_CONFIG.DB_ID, col, id, data),
+    
     delete: (col, id) => db.deleteDocument(APPWRITE_CONFIG.DB_ID, col, id),
+    
     get: (col, id) => db.getDocument(APPWRITE_CONFIG.DB_ID, col, id),
     
-    runScraper: async (payload) => {
-        const execution = await functions.createExecution(
-            APPWRITE_CONFIG.FUNCTIONS.SCRAPER, 
-            JSON.stringify(payload)
-        );
-        return JSON.parse(execution.responseBody);
+    list: (col, queries = []) => db.listDocuments(APPWRITE_CONFIG.DB_ID, col, queries),
+
+    // اجرای تابع اسکرپر در سمت سرور
+    runScraper: async (payload = {}) => {
+        try {
+            const execution = await functions.createExecution(
+                APPWRITE_CONFIG.FUNCTIONS.SCRAPER, 
+                JSON.stringify(payload)
+            );
+            
+            if (execution.status === 'completed') {
+                return JSON.parse(execution.responseBody);
+            } else {
+                return { success: false, error: "وضعیت خطا: " + execution.status };
+            }
+        } catch (error) {
+            console.error("Function Network Error:", error);
+            throw new Error("خطای ارتباط با سرور اسکرپر");
+        }
     }
 };
-
-export async function fetchAllData() {
-    try {
-        const [cRes, uRes, mRes, fRes] = await Promise.all([
-            db.listDocuments(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.CATS, [Query.limit(100)]),
-            db.listDocuments(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.UNITS, [Query.limit(100)]), 
-            db.listDocuments(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.MATS, [Query.limit(5000)]),
-            db.listDocuments(APPWRITE_CONFIG.DB_ID, APPWRITE_CONFIG.COLS.FORMS, [Query.limit(500)])
-        ]);
-        
-        state.categories = cRes.documents;
-        state.units = uRes.documents;
-        state.materials = mRes.documents;
-        state.formulas = fRes.documents.sort((a, b) => new Date(b.$updatedAt) - new Date(a.$updatedAt));
-        return true;
-    } catch (error) {
-        console.error("API Fetch Error:", error);
-        throw error;
-    }
-}

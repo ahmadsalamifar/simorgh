@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import { formatPrice } from './core/utils.js';
+import { formatPrice } from './utils.js';
 
 export function setupScraperListeners(refreshCallback) {
     setupBulkScraperButton(refreshCallback);

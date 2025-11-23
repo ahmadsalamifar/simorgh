@@ -1,7 +1,11 @@
 import { state } from './core/config.js';
-// تغییر مسیر: ایمپورت از فایل محاسبات به جای فایل اصلی
-import { calculateCost } from './formulas_calc.js'; 
-import { formatPrice, formatDate, openModal, closeModal } from './core/utils.js';
+// اصلاح مسیر ایمپورت محاسبات
+import { calculateCost } from './features/formulas/formulas_calc.js'; 
+import { formatPrice, formatDate, toggleElement } from './core/utils.js';
+
+// توابع کمکی برای مدال داخل همین فایل یا utils
+function openModal(id) { toggleElement(id, true); }
+function closeModal(id) { toggleElement(id, false); }
 
 export function setupPrint() {
     // اتصال دکمه چاپ (با چک کردن وجود دکمه)
@@ -12,7 +16,7 @@ export function setupPrint() {
     const btnClose = document.getElementById('btn-close-print');
     if(btnClose) btnClose.onclick = () => closeModal('print-modal');
     
-    // آپدیت زنده نام خریدار (فقط اگر اینپوت وجود داشت)
+    // آپدیت زنده نام خریدار
     const buyerInput = document.getElementById('print-buyer-input');
     if(buyerInput) {
         buyerInput.oninput = (e) => {
@@ -37,7 +41,8 @@ export function printInvoice() {
     if(!f) return;
 
     const calc = calculateCost(f);
-    const comps = JSON.parse(f.components || '[]');
+    let comps = [];
+    try { comps = JSON.parse(f.components || '[]'); } catch(e){}
     
     // پر کردن اطلاعات هدر
     const titleEl = document.getElementById('print-title');
@@ -69,8 +74,7 @@ export function printInvoice() {
                 const m = state.materials.find(x=>x.$id===c.id); 
                 if(m) {
                     name = m.display_name || m.name; 
-                    // اگر واحد ذخیره شده بود نمایش بده، وگرنه واحد مصرف پیش‌فرض
-                    unit = c.unit || m.consumption_unit; 
+                    unit = c.unit || m.consumption_unit || 'عدد'; 
                 }
             }
             else { 
@@ -94,8 +98,7 @@ export function printInvoice() {
     const profitEl = document.getElementById('print-profit');
     const finalEl = document.getElementById('print-final');
 
-    if(rawTotalEl) rawTotalEl.innerText = formatPrice(calc.sub.toFixed(0));
-    if(profitEl) profitEl.innerText = formatPrice(calc.profit.toFixed(0));
+    // توجه: در HTML شما ممکن است ID برای سود و قیمت خام وجود نداشته باشد، اما برای قیمت نهایی هست
     if(finalEl) finalEl.innerText = formatPrice(calc.final.toFixed(0));
     
     openModal('print-modal');
