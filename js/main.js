@@ -12,12 +12,13 @@ async function refreshApp() {
 }
 
 function updateUI() {
-    // اجرای جداگانه هر بخش برای جلوگیری از توقف کل برنامه در صورت خطا
-    try { Formulas.renderFormulaList(); } catch(e) { console.error("Formulas error:", e); }
-    try { Materials.renderMaterials(); } catch(e) { console.error("Materials error:", e); }
-    try { Categories.renderCategories(refreshApp); } catch(e) { console.error("Categories error:", e); }
-    try { Store.renderStore(refreshApp); } catch(e) { console.error("Store error:", e); }
+    // رفرش کردن لیست‌ها
+    Formulas.renderFormulaList();
+    Materials.renderMaterials();
+    Categories.renderCategories(refreshApp);
+    Store.renderStore(refreshApp);
     
+    // اگر فرمولی باز بود، رفرش شود
     if (state.activeFormulaId) {
         const f = state.formulas.find(x => x.$id === state.activeFormulaId);
         if (f) Formulas.renderFormulaDetail(f);
@@ -29,14 +30,9 @@ function updateUI() {
         }
     }
     
-    try { Formulas.updateDropdowns(); } catch(e){}
-    try { Formulas.updateCompSelect(); } catch(e){}
-    try { updateMatCatDropdown(); } catch(e){}
-    
-    const reportsTab = document.getElementById('tab-reports');
-    if (reportsTab && !reportsTab.classList.contains('hidden')) {
-        try { renderReports(); } catch(e) { console.error("Chart error:", e); }
-    }
+    Formulas.updateDropdowns();
+    Formulas.updateCompSelect();
+    updateMatCatDropdown();
 }
 
 function updateMatCatDropdown() {
@@ -53,24 +49,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         try { await account.get(); } catch { await account.createAnonymousSession(); }
         await fetchAllData();
         
-        const loading = document.getElementById('loading-screen');
-        if(loading) loading.classList.add('hidden');
-        document.getElementById('app-content')?.classList.remove('hidden');
+        // نمایش UI پس از لود دیتا
+        const loadingScreen = document.getElementById('loading-screen');
+        if(loadingScreen) loadingScreen.classList.add('hidden');
         
-        // مدیریت تب‌ها با اطمینان از وجود دکمه
-        ['formulas', 'materials', 'categories', 'reports'].forEach(t => {
+        const appContent = document.getElementById('app-content');
+        if(appContent) appContent.classList.remove('hidden');
+        
+        // --- اصلاح خطا: مدیریت تب‌ها ---
+        // 'store' را از این لیست حذف کردیم چون دکمه تب ندارد (دکمه جداگانه دارد)
+        const tabs = ['formulas', 'materials', 'categories']; 
+        
+        tabs.forEach(t => {
              const btn = document.getElementById('btn-tab-' + t);
+             // چک کردن وجود دکمه برای جلوگیری از خطای Cannot set properties of null
              if (btn) {
-                 btn.onclick = () => { 
-                     switchTab(t); 
-                     if(t === 'reports' && typeof renderReports === 'function') renderReports(); 
-                 };
+                 btn.onclick = () => switchTab(t);
              }
         });
-        
+
+        // دکمه فروشگاه جداگانه هندل می‌شود
         const btnStore = document.getElementById('btn-open-store');
         if (btnStore) btnStore.onclick = () => switchTab('store');
 
+        // راه‌اندازی ماژول‌ها
         Formulas.setupFormulas(refreshApp);
         Materials.setupMaterials(refreshApp);
         Categories.setupCategories(refreshApp);

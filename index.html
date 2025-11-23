@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>سامانه سیمرغ (نسخه ۳.۶ - پایدار)</title>
+    <title>سامانه مدیریت تولید سیمرغ (نسخه ۳.3.1)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -36,13 +36,13 @@
 
         <main class="flex-1 overflow-hidden p-2 md:p-4">
             
-            <!-- TAB 1: FORMULAS -->
+            <!-- TAB 1: FORMULAS (Empty Container - Content injected via JS) -->
             <div id="tab-formulas" class="h-full flex flex-col lg:flex-row gap-4"></div>
 
             <!-- TAB 2: MATERIALS & INVENTORY -->
             <div id="tab-materials" class="hidden h-full flex flex-col lg:flex-row gap-6 overflow-y-auto lg:overflow-hidden">
-                <!-- فرم مدیریت کالا (در موبایل پایین، در دسکتاپ چپ) -->
-                <div class="w-full lg:w-1/3 lg:order-1 order-2 shrink-0 pb-20 lg:pb-0">
+                <!-- ستون فرم (چپ) -->
+                <div class="w-full lg:w-1/3 lg:order-1 order-2 shrink-0">
                     <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 lg:h-full lg:overflow-y-auto custom-scrollbar">
                         <div class="flex justify-between items-center mb-3 border-b pb-2">
                             <h3 class="font-bold text-slate-700 text-sm">مدیریت کالا</h3>
@@ -55,19 +55,7 @@
                             <input type="text" id="mat-name" class="input-field text-xs font-bold" placeholder="نام کالا..." required>
                             <input type="text" id="mat-display-name" class="input-field text-xs" placeholder="نام نمایشی (اختیاری)">
 
-                            <!-- آمار موجودی -->
-                            <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex justify-between items-center">
-                                <div>
-                                    <span class="text-[10px] text-indigo-800 block font-bold">موجودی فعلی</span>
-                                    <span id="mat-stock-display" class="text-lg font-black text-indigo-600">0</span>
-                                    <span class="text-[9px] text-indigo-400" id="mat-stock-unit">عدد</span>
-                                </div>
-                                <div>
-                                    <span class="text-[10px] text-indigo-800 block font-bold">میانگین خرید</span>
-                                    <span id="mat-avg-price-display" class="text-sm font-bold text-indigo-600">0</span>
-                                </div>
-                            </div>
-
+                            <!-- بخش واحدها -->
                             <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
                                 <div class="text-[11px] font-bold text-slate-700 mb-2 flex items-center gap-1"><span class="text-amber-500">📐</span> واحدها</div>
                                 <div class="flex items-center gap-2 mb-2 bg-white p-2 rounded border border-slate-100">
@@ -94,7 +82,9 @@
 
                             <div class="pt-2 border-t border-dashed mt-2">
                                 <div class="flex justify-between items-center mb-2">
-                                    <label class="text-[10px] font-bold text-slate-500 flex items-center gap-1"><span>🌐</span> ربات قیمت‌گیر</label>
+                                    <label class="text-[10px] font-bold text-slate-500 flex items-center gap-1">
+                                        <span>🌐</span> لینک سایت
+                                    </label>
                                 </div>
                                 <div class="flex flex-col gap-2">
                                     <div class="flex gap-2 items-center">
@@ -105,7 +95,8 @@
                                          </div>
                                          <input type="hidden" id="mat-scraper-currency" value="toman">
                                     </div>
-                                    <input type="text" id="mat-scraper-anchor" class="input-field text-xs w-full hidden">
+                                    <input type="text" id="mat-scraper-anchor" class="input-field text-xs w-full hidden" placeholder="Anchor (غیرفعال)">
+                                    
                                     <div class="flex gap-2 mt-1">
                                         <div class="w-1/2">
                                             <select id="mat-scraper-unit" class="input-field text-[10px] text-slate-600 bg-white w-full h-8"></select>
@@ -122,10 +113,9 @@
                     </div>
                 </div>
                 
-                <!-- لیست کالاها (در موبایل بالا، در دسکتاپ راست) -->
-                <!-- اصلاح: h-auto در موبایل تا کل لیست اسکرول بخورد -->
-                <div class="w-full lg:w-2/3 lg:order-2 order-1 flex flex-col h-auto lg:h-full overflow-visible lg:overflow-hidden">
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col h-full min-h-[400px]">
+                <!-- ستون لیست (راست) -->
+                <div class="w-full lg:w-2/3 lg:order-2 order-1 flex flex-col h-full overflow-hidden">
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col h-full">
                         <div class="flex flex-col sm:flex-row gap-2 mb-4 items-center shrink-0">
                             <button id="btn-new-mat-plus" class="bg-emerald-500 text-white rounded-lg w-10 h-10 flex items-center justify-center text-xl font-bold shadow hover:bg-emerald-600 transition-colors pb-1 shrink-0 order-3 sm:order-1">+</button>
                             <input type="text" id="search-materials" placeholder="جستجو..." class="input-field pl-4 h-10 text-xs flex-grow order-1 sm:order-2">
@@ -134,6 +124,8 @@
                                 <option value="stock_asc">موجودی کم</option>
                                 <option value="stock_desc">موجودی زیاد</option>
                                 <option value="category">دسته‌بندی</option>
+                                <option value="price_desc">گران‌ترین</option>
+                                <option value="price_asc">ارزان‌ترین</option>
                             </select>
                             <button id="btn-scraper-trigger" class="h-10 text-[10px] text-blue-600 bg-blue-50 px-3 rounded-lg border border-blue-100 hover:bg-blue-100 whitespace-nowrap font-bold flex items-center gap-1 order-4">🤖 <span class="hidden sm:inline">بروزرسانی</span></button>
                         </div>
