@@ -1,8 +1,7 @@
-// مدیریت واحدها و تبدیل واحد
-// اصلاح آدرس ایمپورت:
+// مدیریت واحدها و تبدیل واحد (نسخه سبک)
 import { state } from '../../core/config.js';
-// استفاده از parseLocaleNumber از utils مشترک
 import { parseLocaleNumber } from '../../core/utils.js';
+import { createRelationRowHTML, showFactorHint } from './materials_units_view.js';
 
 let currentUnitRelations = [];
 
@@ -76,36 +75,21 @@ export function renderRelationsUI() {
     
     currentUnitRelations.forEach((rel, index) => {
         const options = state.units.map(u => `<option value="${u.name}" ${u.name === rel.name ? 'selected' : ''}>${u.name}</option>`).join('');
-        const row = document.createElement('div');
-        row.className = 'flex items-center gap-1 bg-white p-1 rounded border border-slate-200 mb-1 shadow-sm text-xs';
-        row.innerHTML = `
-            <div class="flex flex-col items-center relative group">
-                <input type="text" class="input-field w-14 text-center p-1 h-7 bg-slate-50 rel-qty-unit font-bold text-emerald-600" value="${rel.qtyUnit}">
-                <span class="text-[8px] text-slate-400 absolute -top-3 opacity-0 group-hover:opacity-100 transition-opacity bg-white px-1 border rounded shadow-sm z-10">مقدار واحد</span>
-            </div>
-            
-            <select class="input-field w-24 px-1 h-7 text-[10px] rel-name-select font-bold">${options}</select>
-            
-            <span class="text-slate-400 text-[10px] px-0.5 font-bold">=</span>
-            
-            <div class="flex flex-col items-center relative group">
-                <input type="text" class="input-field w-14 text-center p-1 h-7 bg-slate-50 rel-qty-base font-bold text-blue-600" value="${rel.qtyBase}">
-                <span class="text-[8px] text-slate-400 absolute -top-3 opacity-0 group-hover:opacity-100 transition-opacity bg-white px-1 border rounded shadow-sm z-10">معادل پایه</span>
-            </div>
-            
-            <span class="w-12 truncate text-[10px] base-unit-label text-slate-500" title="${baseUnitName}">${baseUnitName}</span>
-            <button type="button" class="text-rose-500 px-2 btn-remove-rel text-lg hover:bg-rose-50 rounded transition-colors">×</button>
-        `;
         
+        // استفاده از تابع View برای تولید HTML
+        const row = createRelationRowHTML(rel, options);
+        
+        // آپدیت لیبل پایه
+        row.querySelector('.base-unit-label').innerText = baseUnitName;
+        row.querySelector('.base-unit-label').title = baseUnitName;
+
+        // اتصال رویدادها
         const inputs = row.querySelectorAll('input, select');
-        
-        // --- رفع باگ سینتکس در اینجا ---
         inputs.forEach(el => {
             el.onchange = () => {
                 rel.name = row.querySelector('.rel-name-select').value;
                 const qU = parseLocaleNumber(row.querySelector('.rel-qty-unit').value);
                 const qB = parseLocaleNumber(row.querySelector('.rel-qty-base').value);
-                
                 rel.qtyUnit = qU || 0;
                 rel.qtyBase = qB || 0;
                 
@@ -113,7 +97,6 @@ export function renderRelationsUI() {
                 calculateScraperFactor(); 
             };
         });
-        // -------------------------------
 
         row.querySelector('.btn-remove-rel').onclick = () => { 
             currentUnitRelations.splice(index, 1); 
@@ -175,30 +158,8 @@ export function calculateScraperFactor() {
     const finalRate = parseFloat(rate.toFixed(6));
     factorInput.value = finalRate;
 
+    // استفاده از تابع View برای نمایش راهنما
     showFactorHint(sUnit, pUnit, finalRate);
-}
-
-function showFactorHint(siteUnit, purchaseUnit, rate) {
-    let hintEl = document.getElementById('scraper-factor-hint');
-    const container = document.getElementById('mat-scraper-factor').parentElement;
-    
-    if (!hintEl && container) {
-        hintEl = document.createElement('div');
-        hintEl.id = 'scraper-factor-hint';
-        hintEl.className = 'text-[10px] text-slate-500 mt-1 w-full text-center bg-slate-100 p-1 rounded';
-        container.appendChild(hintEl);
-    }
-    
-    if (hintEl) {
-        if (siteUnit === purchaseUnit) {
-            hintEl.innerHTML = `قیمت سایت بدون تغییر وارد می‌شود`;
-            hintEl.className = 'text-[10px] text-slate-400 mt-1 w-full text-center';
-        } else {
-            const operation = rate >= 1 ? `× ${rate}` : `÷ ${(1/rate).toFixed(2)}`;
-            hintEl.innerHTML = `قیمت <b>${purchaseUnit}</b> = قیمت <b>${siteUnit}</b> ${operation}`;
-            hintEl.className = 'text-[10px] text-blue-600 mt-1 w-full text-center bg-blue-50 p-1 rounded border border-blue-100';
-        }
-    }
 }
 
 function setSelectValue(id, val) {
