@@ -30,15 +30,62 @@ export function formatDate(d) {
     return new Date(d).toLocaleDateString('fa-IR');
 }
 
-// مدیریت نمایش/مخفی کردن المان‌ها
+export function getDateBadge(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const diffDays = Math.ceil(Math.abs(new Date() - date) / (1000 * 60 * 60 * 24));
+    
+    let colorClass = 'bg-emerald-100 text-emerald-700 border-emerald-200'; 
+    let text = formatDate(dateString);
+
+    if(diffDays > 7) colorClass = 'bg-orange-100 text-orange-700 border-orange-200'; 
+    if(diffDays > 30) {
+        colorClass = 'bg-slate-100 text-slate-500 border-slate-200'; 
+        text = 'قدیمی: ' + text;
+    }
+    return `<span class="text-[10px] px-1.5 py-0.5 rounded border ${colorClass} whitespace-nowrap">${text}</span>`;
+}
+
+// مدیریت تب‌ها
+export function switchTab(id) {
+    // لیست تمام تب‌های موجود در HTML
+    const tabs = ['formulas', 'materials', 'reports', 'categories', 'store'];
+    
+    tabs.forEach(t => {
+        const el = document.getElementById('tab-' + t);
+        const btn = document.getElementById('btn-tab-' + t);
+        if (el) el.classList.add('hidden');
+        if (btn) btn.classList.remove('active');
+    });
+
+    const targetEl = document.getElementById('tab-' + id);
+    const targetBtn = document.getElementById('btn-tab-' + id);
+    
+    if(targetEl) targetEl.classList.remove('hidden');
+    if(targetBtn) targetBtn.classList.add('active');
+}
+
+// مدیریت نمایش/مخفی کردن المان‌ها (برای مدال‌ها و لودینگ)
 export function toggleElement(id, show) {
     const el = document.getElementById(id);
     if (!el) return;
     if (show) {
         el.classList.remove('hidden');
+        // اگر کلاس modal-overlay دارد باید flex شود تا وسط چین بماند
         if (el.classList.contains('modal-overlay')) el.style.display = 'flex';
     } else {
         el.classList.add('hidden');
         if (el.classList.contains('modal-overlay')) el.style.display = 'none';
     }
+}
+
+export function openModal(id) { toggleElement(id, true); }
+export function closeModal(id) { toggleElement(id, false); }
+
+export function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
 }
