@@ -4,7 +4,7 @@ import { api } from './core/api.js';
 import { switchTab, toggleElement } from './core/utils.js';
 import { setupPrint } from './print.js'; 
 // اضافه کردن ماژول Layout
-import { injectAppLayout } from './core/layout.js';
+import { injectAppLayout } from './layout/layout.js';
 
 import * as MaterialController from './features/materials/materialController.js';
 import * as FormulaController from './features/formulas/formulaController.js';
