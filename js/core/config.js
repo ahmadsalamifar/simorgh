@@ -9,7 +9,8 @@ const APPWRITE_CONFIG = {
         CATS: 'categories',
         MATS: 'materials',
         FORMS: 'formulas',
-        UNITS: 'units'
+        UNITS: 'units',
+        HISTORY: 'price_history' // کالکشن جدید برای ذخیره تاریخچه قیمت‌ها
     },
     FUNCTIONS: {
         SCRAPER: '691dc278002eafe2ac0c'

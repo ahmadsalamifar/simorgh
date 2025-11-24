@@ -1,6 +1,7 @@
-// اصلاح آدرس‌های ایمپورت به core
+// ماژول دریافت قیمت آنلاین و ذخیره تاریخچه
 import { api } from '../../core/api.js';
 import { formatPrice } from '../../core/utils.js';
+import { APPWRITE_CONFIG, state } from '../../core/config.js';
 
 export function setupScraperListeners(refreshCallback) {
     setupBulkScraperButton(refreshCallback);
@@ -16,7 +17,7 @@ function setupBulkScraperButton(refreshCallback) {
     btn.parentNode.replaceChild(newBtn, btn);
     
     newBtn.onclick = async () => {
-        if (!confirm('آیا می‌خواهید قیمت تمام کالاهای لینک‌دار را بروزرسانی کنید؟')) return;
+        if (!confirm('آیا می‌خواهید قیمت تمام کالاهای لینک‌دار را بروزرسانی کنید؟\n(تاریخچه قیمت‌ها نیز ذخیره خواهد شد)')) return;
         
         const originalHtml = newBtn.innerHTML;
         newBtn.innerHTML = '⏳ <span class="hidden sm:inline">در حال دریافت...</span>';
@@ -26,6 +27,9 @@ function setupBulkScraperButton(refreshCallback) {
         try {
             const result = await api.runScraper({ type: 'bulk' }); 
             if (result.success && result.report) {
+                // ذخیره تاریخچه قیمت‌ها برای آیتم‌هایی که تغییر کرده‌اند
+                await savePriceHistory(result.report);
+                
                 showScraperReport(result.report); 
                 refreshCallback(); 
             } else {
@@ -39,6 +43,37 @@ function setupBulkScraperButton(refreshCallback) {
             newBtn.classList.remove('opacity-70');
         }
     };
+}
+
+// تابع جدید: ذخیره تاریخچه در دیتابیس
+async function savePriceHistory(report) {
+    // فیلتر کردن آیتم‌هایی که قیمت جدید دارند
+    const updates = report.filter(item => item.status === 'success' && item.new);
+    
+    if (updates.length === 0) return;
+
+    console.log(`Saving history for ${updates.length} items...`);
+
+    // برای هر آیتم آپدیت شده، یک رکورد در تاریخچه ایجاد می‌کنیم
+    const historyPromises = updates.map(async (item) => {
+        try {
+            // پیدا کردن ID کالا بر اساس نام یا URL (چون اسکرپر ممکن است ID برنگرداند)
+            // بهترین حالت این است که اسکرپر ID را برگرداند، اما اینجا از state مچ می‌کنیم
+            const material = state.materials.find(m => m.name === item.name || m.scraper_url === item.url);
+            
+            if (material) {
+                await api.create(APPWRITE_CONFIG.COLS.HISTORY, {
+                    material_id: material.$id,
+                    price: parseFloat(item.new),
+                    date: new Date().toISOString()
+                });
+            }
+        } catch (err) {
+            console.error("Error saving history for:", item.name, err);
+        }
+    });
+
+    await Promise.all(historyPromises);
 }
 
 function setupTestLinkButton() {
